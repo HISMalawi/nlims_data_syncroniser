@@ -1,0 +1,2 @@
+class SlaveTest < ApplicationRecord
+end

@@ -1,0 +1,2 @@
+class SiteSyncFrequency < ApplicationRecord
+end

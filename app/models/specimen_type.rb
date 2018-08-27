@@ -1,0 +1,2 @@
+class SpecimenType < ApplicationRecord
+end

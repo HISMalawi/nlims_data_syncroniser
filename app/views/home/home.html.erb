@@ -1,0 +1,387 @@
+
+<style>
+    .tab {
+        overflow: hidden;
+        border: 1px solid #ccc;
+        background-color: #f1f1f1;
+    }
+    .tab button {
+        background-color: inherit;
+        float: left;
+        border: none;
+        outline: none;
+        cursor: pointer;
+        padding: 14px 16px;
+        transition: 0.3s;
+    }
+
+    /* Change background color of buttons on hover */
+    .tab button:hover {
+        background-color: #ddd;
+    }
+
+    /* Create an active/current tablink class */
+    .tab button.active {
+        background-color: #ccc;
+    }
+
+    /* Style the tab content */
+    .tabcontent {
+        display: none;
+        padding: 6px 12px;
+        border: 1px solid #ccc;
+        border-top: none;
+    }
+
+</style>
+
+<div class="col-sm-12" style="margin-top:5px;">
+
+    <div class="col-sm-7" style=""> 
+        <div style="border: thin solid lightgrey;height:750px;">
+        <div id="main" class="col-sm-5" style="height: 750px;">
+
+        </div>
+        <div id="status-details" class="col-sm-6" style="margin-left: 5%; height: 40%;box-shadow: 2px 2px 2px 2px #888888; margin-top:40px; background-color: white;">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Site</th>
+                            <th>Last Seen</th>                            
+                        </tr>
+                    </thead>
+                    <tbody>
+                       
+                        <% @sites.each do |site| %>
+                            
+                            <% if site['enabled'] && site['sync_status'] %>
+                                <tr>
+                                    <td><%= site['name'] %></td>
+                                    <td style="color: green">Online</td>
+                                    
+                                </tr>
+                            <% elsif site['enabled'] && site['sync_status'] == false %>
+                            <% @last.each do |d| 
+                                                               
+                            %>
+
+                            <% end %>
+                                <tr>
+                                    <td><%= site['name'] %></td>
+                                    <td style="color: red"><%= @last[0][site.id] %></td>
+
+                                </tr>
+                            <% end %>
+                        <% end %>        
+
+                    </tbody>
+                </table>    
+            </div>
+        </div>
+    </div>
+
+    <div class="col-sm-5" > 
+        <div class="tab">
+            <button class="tablinks" onclick="openTab(event, 'add')">Add Site</button>
+            <button class="tablinks" onclick="openTab(event, 'edit')">Edit Site</button>
+            <span style="float:right" id="info"> </span>
+        </div>
+        
+        <div id="add" class="tabcontent">
+            
+            <div>
+                <form class="form">
+                    <div class="form-group">
+                            <label>Site name: </label>
+                            <select id="site" class="form-control" name="site_selected"> 
+                                <% @en_sites.each do |st| %>
+                                    <% v =  st.id %>
+                                    <option value="<%= v %>">
+                                        <%= st.name %> 
+                                    </option>
+
+                                <% end %>                               
+
+                            </select>
+                    </div>
+                    <div class="form-group">
+                            <label>Site code:</label>
+                            <input id="site_code" type="text" class="form-control" name="site_code">
+                    </div>
+                    <div class="form-group">
+                            <label>IP address: 0.0.0.0 </label>
+                            <input id="ip" type="text" class="form-control" name="ip">
+                    </div>
+                    <div class="form-group">
+                            <label>Port: couchdb-port-5984</label>
+                            <input id="port" type="text" class="form-control" name="port">
+                    </div>
+                    <button class="btn btn-success" onclick="save()"> save </button>
+                    
+                </form>
+            </div>
+
+        </div>
+        
+        <div id="edit" class="tabcontent">
+          
+            <div>
+                <form class="form">
+                    <div class="form-group">
+                            <label>Site name: </label>
+                            <select id="sitee" class="form-control" name="site_selected"> 
+                                <% @sites.each do |st| %>
+                                    <% v =  st.id %>
+                                    <option value="<%= v %>" onclick="get_details(this.value)">
+                                        <%= st.name %> 
+                                    </option>
+
+                                <% end %>                               
+
+                            </select>
+                    </div>
+                    <div class="form-group">
+                            <label>Site code:</label>
+                            <input id="site_codee" type="text" class="form-control" name="site_code">
+                    </div>
+                    <div class="form-group">
+                            <label>IP address: 0.0.0.0 </label>
+                            <input id="ipp" type="text" class="form-control" name="ip">
+                    </div>
+                    <div class="form-group">
+                            <label>Port: couchdb-port-5984</label>
+                            <input id="portt" type="text" class="form-control" name="port">
+                    </div>
+                    <button onclick="save_edit()" class="btn btn-success"> save </button>
+                    <button onclick="disable()" class="btn btn-primary"> disable </button>
+                </form>
+            </div>
+        </div>
+        
+    </div>
+
+</div>
+
+
+
+<script type="text/javascript">
+
+    function disable()
+    {
+        var site = document.getElementById("sitee").value;
+        var url = "/disable?site=" + site;
+        jQuery.ajax({
+                async: false,
+                type: "post",
+                url: url,
+                success: function(res)
+                {
+                    
+                    var info = document.getElementById("info");
+                    info.style.color = "green";
+                    info.innerHTML = "site saved";
+                },
+                error: function(err)
+                {
+                   console.log(err);
+                }
+        });
+
+    }
+
+    function get_details(value)
+    {
+        var url = "/get_site_details?id=" + value;
+
+        jQuery.ajax({
+                    async: false,
+                    url : url,
+                    success: function(res){
+                        var data = JSON.parse(res);
+                                   
+                        document.getElementById("ipp").value = data[0].host_address;
+                        document.getElementById("site_codee").value = data[0].site_code;
+                        document.getElementById("portt").value = data[0].application_port;
+                          
+                    },
+                    error: function(err)
+                    {
+                        console.log(err);
+                    }
+        })
+    }
+
+    function save_edit()
+    {
+        var port = document.getElementById("portt").value;
+        var ip = document.getElementById("ipp").value;
+        var site = document.getElementById("sitee").value;
+        var site_code = document.getElementById("site_codee").value;
+
+        var url = "/edit_site?site=" + site + "&ip=" + ip + "&port=" + port + "&site_code=" + site_code;
+        jQuery.ajax({
+                async: false,
+                type: "post",
+                url: url,
+                success: function(res)
+                {
+                    
+                    var info = document.getElementById("info");
+                    info.style.color = "green";
+                    info.innerHTML = "site saved";
+                },
+                error: function(err)
+                {
+                    console.log(err);
+                }
+        });
+    }
+
+    function save()
+    {
+        var port = document.getElementById("port").value;
+        var ip = document.getElementById("ip").value;
+        var site = document.getElementById("site").value;
+        var site_code = document.getElementById("site_code").value;
+
+        var url = "/edit_site?site=" + site + "&ip=" + ip + "&port=" + port + "&site_code=" + site_code;
+        jQuery.ajax({
+                async: false,
+                type: "post",
+                url: url,
+                success: function(res)
+                {
+                
+                    var info = document.getElementById("info");
+                    info.style.color = "green";
+                    info.innerHTML = "site saved";
+                },
+                error: function(err)
+                {
+                    console.log(err);
+                }
+        });
+    }
+
+
+    function openTab(evt, type) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tabcontent");
+        for (i = 0; i < tabcontent.length; i++) {
+            tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tablinks");
+        for (i = 0; i < tablinks.length; i++) {
+            tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(type).style.display = "block";
+        evt.currentTarget.className += " active";
+    }
+
+
+
+    var zoomlevel = 1;
+    var currentSite = "";
+    var alerts = {};
+    var sitesErrors = {};
+
+
+
+    var loader = d3.xml("/images/Malawi.svg", function(xml) {
+        document.getElementById("main").appendChild(xml.documentElement);
+
+        <% @sites.each do |site|
+        
+            refPoints = [-9.331537, -17.158189, 32.674051, 35.969950];
+            offsets = [10, 295, 10, 710];
+            x = site['x'].to_f
+            y = site['y'].to_f
+
+            x = ((offsets[1] - offsets[0]) * ((x.abs - refPoints[2].abs) / (refPoints[3].abs - refPoints[2].abs)))
+
+            y = ((offsets[3] - offsets[2]) * ((y.abs - refPoints[0].abs) / (refPoints[1].abs - refPoints[0].abs)))
+
+        %>
+
+            var color = "red";
+
+            <%
+            if site['sync_status'] == true%>
+                color = 'green';
+            <% end %>
+                
+            d3.select("#malawi").append("circle")
+                    .style("stroke", "white")
+                    .style("stroke-width", "1px")
+                    .style("fill", color)
+                    .style("margin", "auto")
+                    .attr("r", 6)
+                    .attr("class", "circle")
+                    .attr("cx", "<%= x %>")
+                    .attr("cy", "<%= y %>")
+                    .attr("color", color)
+                    .attr("id", "<%= site['site_code'].downcase %>")
+                    .attr("tag", "<%= site['name'] %>")
+                    .on("mousedown", function(){
+                        // window.parent.location = "/report/site_summary?site_name=" + this.getAttribute("tag")
+                    })
+                    .on("mouseover", function(){
+
+                        d3.select(".circle").attr("r", 7);
+                        d3.select("#" + this.id).attr("r", 12).style("z-index", "100");
+
+                        return tooltip.style("visibility", "visible");
+                    })
+                    .on("mousemove", function(){
+                        return tooltip.style("top",
+                                        (d3.event.pageY-10)+"px")
+                                .style("left", (d3.event.pageX+20)+"px")
+                                .text(getSiteInfo(this.id));
+                    })
+                    .on("mouseout", function(){
+                        d3.select("#" + this.id).attr("r", 7).style("z-index", "10")
+                                .style("fill", this.getAttribute("color"));
+                        return tooltip.style("visibility", "hidden");
+                    });
+
+        <% end %>
+    
+    });
+
+    var tooltip = d3.select("body")
+            .append("div")
+            .style("position", "absolute")
+            .style("z-index", "10")
+            .style("visibility", "hidden")
+            .style("background", "#f6f3d7")
+            .style("padding", "5px")
+            .style("border", "1px solid #000")
+            .style("border-radius", "5px")
+            .text("Tooltip");
+
+    function getSiteInfo(id){
+        var result = id;
+
+        if(document.getElementById(id)){
+            result = document.getElementById(id).getAttribute("tag");
+            if (sitesErrors[result]){
+                result = result + ",   " + sitesErrors[result];
+            }else{
+                result = result;
+            }
+        }
+
+        return result;
+    }
+
+    function resizeMap(){
+        zoomlevel = 1;
+
+        d3.select('#region').attr('transform','scale(' + zoomlevel + ')')
+                .style("background", "white")
+
+    }
+
+
+
+    </script>

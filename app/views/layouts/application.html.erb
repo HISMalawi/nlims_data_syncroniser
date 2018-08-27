@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>NlimsDataSyncroniser</title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= stylesheet_link_tag    'application', media: 'all', 'data-turbolinks-track': 'reload' %>
+    <%= javascript_include_tag 'application', 'data-turbolinks-track': 'reload' %>
+  </head>
+
+  <body>
+
+    <div style="height: 60px; background-color:black;margin-top: -20px; ">
+        <h3 style="padding-top: 30px; padding-left: 5px;color: white;font-weight: bold;"> NLIMS DATA SYNCRONISER </h3>
+    </div>
+
+    <%= yield %>
+  </body>
+</html>

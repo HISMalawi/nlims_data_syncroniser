@@ -1,0 +1,2 @@
+class SpecimenStatus < ApplicationRecord
+end

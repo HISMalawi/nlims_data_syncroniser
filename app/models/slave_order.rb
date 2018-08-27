@@ -1,0 +1,2 @@
+class SlaveOrder < ApplicationRecord
+end
