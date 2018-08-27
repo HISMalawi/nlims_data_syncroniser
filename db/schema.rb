@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2018_08_14_071824) do
+ActiveRecord::Schema.define(version: 2018_08_27_142046) do
 
   create_table "measure_ranges", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "measures_id"
@@ -105,7 +105,7 @@ ActiveRecord::Schema.define(version: 2018_08_14_071824) do
     t.datetime "updated_at", null: false
   end
 
-  create_table "sites", id: :integer, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+  create_table "sites", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "name"
     t.string "district"
     t.float "x"
@@ -143,7 +143,6 @@ ActiveRecord::Schema.define(version: 2018_08_14_071824) do
     t.string "priority"
     t.string "order_status"
     t.string "order_status_resolved_to"
-    t.string "order_resolve_status"
   end
 
   create_table "slave_test_results", id: false, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
@@ -191,7 +190,7 @@ ActiveRecord::Schema.define(version: 2018_08_14_071824) do
   create_table "test_results", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "test_id"
     t.bigint "measure_id"
-    t.string "result", limit: 2000
+    t.string "result"
     t.string "doc_id"
     t.datetime "time_entered"
     t.datetime "created_at", null: false
