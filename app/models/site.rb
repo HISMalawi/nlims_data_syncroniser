@@ -1,2 +1,4 @@
 class Site < ApplicationRecord
+
+
 end
