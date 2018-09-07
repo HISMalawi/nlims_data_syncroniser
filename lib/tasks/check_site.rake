@@ -1,13 +1,11 @@
 require 'sync.rb'
 namespace :check_site do
   desc "TODO"
-  task check_sync: :environment do
+  task ping_site: :environment do
     sites = Site.where(enabled: true);
   
-    sites.each do |site|
-      
-      if Sync.up?(site.host_address)
-       
+    sites.each do |site|      
+      if Sync.up?(site.host_address)       
         Site.where(id: site.id).update_all(sync_status: 1)
         sf = SiteSyncFrequency.new
         sf.site = site.id        

@@ -61,14 +61,17 @@
                                     
                                 </tr>
                             <% elsif site['enabled'] && site['sync_status'] == false %>
-                                <% @last.each do |d| %>
-
-                                    <% if !@last.blank? %>
-                                        <tr>
-                                            <td><%= site['name'] %></td>
-                                            <td style="color: red"><%= @last[0][site.id] %></td>
-                                        </tr>
+                                <% if !@last.blank? %>
+                                    <% @last.each do |d| %>   
+                                        
+                                        <% if d.keys[0] == site['id'] %>  
+                                            <tr>
+                                                <td><%= site['name'] %></td>
+                                                <td style="color: red"><%= d[d.keys[0]] %></td>
+                                            </tr>
+                                        <% end %>                                    
                                     <% end %>
+                                   
                                 <% end %>
                             <% end %>
                         <% end %>        

@@ -121,10 +121,5 @@ namespace :check_data_anomalise do
       
       end
     end
-
   end
-
 end
-
-
- 

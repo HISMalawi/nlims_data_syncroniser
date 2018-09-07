@@ -6,9 +6,8 @@ class HomeController < ApplicationController
         @last = []
         @sites.each do |st|
             next if st.sync_status == 1
-            site_id = st.id
-           
-            res = SiteSyncFrequency.find_by_sql("SELECT * FROM site_sync_frequencies WHERE site='#{site_id}' AND status='0'").last
+            site_id = st.id           
+            res = SiteSyncFrequency.find_by_sql("SELECT * FROM site_sync_frequencies WHERE site='#{site_id}'").last
             if res
              @last.push(st.id => res.updated_at)
             end
