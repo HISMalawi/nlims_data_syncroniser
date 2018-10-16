@@ -1,0 +1,2 @@
+class TestStatusTrail < ApplicationRecord
+end

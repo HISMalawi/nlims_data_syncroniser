@@ -1,0 +1,2 @@
+class Speciman < ApplicationRecord
+end

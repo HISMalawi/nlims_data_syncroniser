@@ -23,8 +23,7 @@ class PingSiteJob
         end
       end
       PingSiteJob.perform_in(0)
-    rescue
-      
+    rescue      
       PingSiteJob.perform_in(0)
     end   
   end
