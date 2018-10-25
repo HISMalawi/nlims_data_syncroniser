@@ -22,9 +22,9 @@ class PingSiteJob
           sf.save()
         end
       end
-      PingSiteJob.perform_in(0)
+      PingSiteJob.perform_in(5)
     rescue      
-      PingSiteJob.perform_in(0)
+      PingSiteJob.perform_in(5)
     end   
   end
 end

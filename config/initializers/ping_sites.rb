@@ -1,3 +1,3 @@
-require "couchdb_to_mysql_synchroniser.rb"
+require "ping_site_job.rb"
 
-CouchdbMysqlSynchroniser.perform_in(5)
+PingSiteJob.perform_in(5)
