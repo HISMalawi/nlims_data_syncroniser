@@ -21,8 +21,7 @@ class CouchdbMysqlSynchroniser
 
       docs.each do |document|
         tracking_number = document['id']
-        if OrderService.check_order(tracking_number) == true
-          puts tracking_number
+        if OrderService.check_order(tracking_number) == true         
           OrderService.update_order(document,tracking_number)
         else       
           OrderService.create_order(document,tracking_number)         
