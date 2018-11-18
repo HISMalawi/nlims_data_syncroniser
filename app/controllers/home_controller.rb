@@ -29,8 +29,10 @@ class HomeController < ApplicationController
         port = params[:port]
         ip = params[:ip]
         site_code = params[:site_code]
+        username = params[:username]
+        password = params[:password]
 
-        res = Site.where(id: site).update_all(application_port: port, host_address: ip, enabled: true, site_code: site_code)
+        res = Site.where(id: site).update_all(application_port: port, host_address: ip, enabled: true, site_code: site_code,couch_username: username, couch_password: password)
         if res == 1
             render plain: true and return
         end

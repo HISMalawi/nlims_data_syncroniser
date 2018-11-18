@@ -8,10 +8,12 @@ class CreateSites < ActiveRecord::Migration[5.2]
     	t.string :region
     	t.string :description
     	t.boolean :enabled
-        t.boolean :sync_status
-        t.string :site_code
-        t.string :application_port
-        t.string :host_address
+      t.boolean :sync_status
+      t.string :site_code
+      t.string :application_port
+      t.string :host_address
+      t.string :couch_username
+      t.string :couch_password
       t.timestamps
     end
   end

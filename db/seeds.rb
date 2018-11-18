@@ -26,9 +26,11 @@ sites.each do |key,site|
 				description: s['facility_type'],
 				enabled: false,
 				sync_status: false,
-				site_code: 'kch',
+				site_code: '',
 				application_port: '0000',
-				host_address: '192.168.120.500'
+				host_address: '',
+				couch_password: '',
+				couch_username: ''
 			)
 	end
 end

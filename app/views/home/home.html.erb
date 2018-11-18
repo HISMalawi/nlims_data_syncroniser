@@ -118,6 +118,14 @@
                             <label>Port: couchdb-port-5984</label>
                             <input id="port" type="text" class="form-control" name="port">
                     </div>
+                    <div class="form-group">
+                            <label>Couch-username</label>
+                            <input id="couch_username" type="text" class="form-control" name="couch_username">
+                    </div>
+                    <div class="form-group">
+                            <label>Couch-password</label>
+                            <input id="couch_password" type="text" class="form-control" name="couch_password">
+                    </div>
                     <button class="btn btn-success" onclick="save()"> save </button>
                     
                 </form>
@@ -153,6 +161,14 @@
                     <div class="form-group">
                             <label>Port: couchdb-port-5984</label>
                             <input id="portt" type="text" class="form-control" name="port">
+                    </div>
+                    <div class="form-group">
+                            <label>Couch-username</label>
+                            <input id="ccouch_username" type="text" class="form-control" name="couch_username">
+                    </div>
+                    <div class="form-group">
+                            <label>Couch-password</label>
+                            <input id="ccouch_password" type="text" class="form-control" name="couch_password">
                     </div>
                     <button onclick="save_edit()" class="btn btn-success"> save </button>
                     <button onclick="disable()" class="btn btn-primary"> disable </button>
@@ -204,6 +220,8 @@
                         document.getElementById("ipp").value = data[0].host_address;
                         document.getElementById("site_codee").value = data[0].site_code;
                         document.getElementById("portt").value = data[0].application_port;
+                        document.getElementById("ccouch_username").value = data[0].couch_username;
+                        document.getElementById("ccouch_password").value = data[0].couch_password;
                           
                     },
                     error: function(err)
@@ -219,8 +237,10 @@
         var ip = document.getElementById("ipp").value;
         var site = document.getElementById("sitee").value;
         var site_code = document.getElementById("site_codee").value;
+        var c_username = document.getElementById("ccouch_username").value;
+        var c_password = document.getElementById("ccouch_password").value;
 
-        var url = "/edit_site?site=" + site + "&ip=" + ip + "&port=" + port + "&site_code=" + site_code;
+        var url = "/edit_site?site=" + site + "&ip=" + ip + "&port=" + port + "&site_code=" + site_code + "&username=" + c_username + "&password=" + c_password;
         jQuery.ajax({
                 async: false,
                 type: "post",
@@ -245,8 +265,10 @@
         var ip = document.getElementById("ip").value;
         var site = document.getElementById("site").value;
         var site_code = document.getElementById("site_code").value;
+        var c_username = document.getElementById("couch_username").value;
+        var c_password = document.getElementById("couch_password").value;
 
-        var url = "/edit_site?site=" + site + "&ip=" + ip + "&port=" + port + "&site_code=" + site_code;
+        var url = "/edit_site?site=" + site + "&ip=" + ip + "&port=" + port + "&site_code=" + site_code + "&username=" + c_username + "&password=" + c_password;
         jQuery.ajax({
                 async: false,
                 type: "post",
