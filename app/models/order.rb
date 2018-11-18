@@ -1,7 +1,7 @@
 class Order < CouchRest::Model::Base
     use_database "order"
 
-    property :_id, String
+    property :tracking_number, String
     property :sample_status, String
     property :date_created, String
     property :sending_facility, String
@@ -10,7 +10,7 @@ class Order < CouchRest::Model::Base
     property :test_results, {}
     property :patient, {}
     property :order_location, String
-    property :districy, String
+    property :district, String
     property :priority, String
     property :who_order_test, {}
     property :who_dispatched_test, String

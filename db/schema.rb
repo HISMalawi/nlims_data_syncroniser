@@ -94,7 +94,7 @@ ActiveRecord::Schema.define(version: 2018_10_24_110505) do
     t.index ["test_type_id"], name: "index_panels_on_test_type_id"
   end
 
-  create_table "patients", id: :string, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+  create_table "patients", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.string "patient_number"
     t.string "name"
     t.string "email"
@@ -149,9 +149,12 @@ ActiveRecord::Schema.define(version: 2018_10_24_110505) do
     t.datetime "updated_at", null: false
   end
 
-  create_table "specimen", id: :string, options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
+  create_table "specimen", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
     t.bigint "specimen_type_id"
     t.bigint "specimen_status_id"
+    t.bigint "ward_id"
+    t.string "tracking_number"
+    t.string "couch_id"
     t.datetime "date_created"
     t.string "priority", null: false
     t.string "drawn_by_id"
@@ -166,6 +169,7 @@ ActiveRecord::Schema.define(version: 2018_10_24_110505) do
     t.datetime "updated_at", null: false
     t.index ["specimen_status_id"], name: "index_specimen_on_specimen_status_id"
     t.index ["specimen_type_id"], name: "index_specimen_on_specimen_type_id"
+    t.index ["ward_id"], name: "index_specimen_on_ward_id"
   end
 
   create_table "specimen_status_trails", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|
@@ -274,17 +278,17 @@ ActiveRecord::Schema.define(version: 2018_10_24_110505) do
     t.bigint "specimen_id"
     t.bigint "test_type_id"
     t.bigint "test_status_id"
-    t.bigint "visit_id"
+    t.bigint "patient_id"
     t.string "created_by"
     t.bigint "panel_id"
     t.datetime "time_created"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["panel_id"], name: "index_tests_on_panel_id"
+    t.index ["patient_id"], name: "index_tests_on_patient_id"
     t.index ["specimen_id"], name: "index_tests_on_specimen_id"
     t.index ["test_status_id"], name: "index_tests_on_test_status_id"
     t.index ["test_type_id"], name: "index_tests_on_test_type_id"
-    t.index ["visit_id"], name: "index_tests_on_visit_id"
   end
 
   create_table "testtype_measures", options: "ENGINE=InnoDB DEFAULT CHARSET=utf8", force: :cascade do |t|

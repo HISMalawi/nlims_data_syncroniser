@@ -1,7 +1,7 @@
 module  OrderService
 
-    def self.create_order(document,tracking_number)
-        ActiveRecord::Base.transaction do   
+    def self.create_order(document,tracking_number,couch_id)
+        puts tracking_number    
             document = document['doc']            
             patient_id = document['patient']['id']
             patient_f_name = document['patient']['first_name']
@@ -11,7 +11,7 @@ module  OrderService
             patient_phone = document['patient']['phone_number']
 
             ward = document['order_location']
-            district  = document['districy']
+            district  = document['district']
             date_created = document['date_created']
             priority = document['priority']
             receiving_facility = document['receiving_facility']
@@ -25,14 +25,14 @@ module  OrderService
             who_order_phone_number = document['who_order_test']['phone_number']
             
             ward_id = OrderService.get_ward_id(ward)
-            visit_id = OrderService.save_visit(patient_id,'',ward_id)
-            
             sample_type_id = OrderService.get_specimen_type_id(sample_type)
             sample_status_id = OrderService.get_specimen_status_id(sample_status)
-            Speciman.create(
-                  :id => tracking_number,
+            
+          sp = Speciman.create(
+                  :tracking_number => tracking_number,
                   :specimen_type_id =>  sample_type_id,
                   :specimen_status_id =>  sample_status_id,
+                  :couch_id => couch_id,
                   :priority => priority,
                   :drawn_by_id => who_order_id,
                   :drawn_by_name =>  who_order_f_name + " " + who_order_l_name,
@@ -41,12 +41,28 @@ module  OrderService
                   :art_start_date => Time.now,
                   :sending_facility => sending_facility,
                   :requested_by => "",
+                  :ward_id => 1,
                   :district => district,
                   :date_created => date_created
             )
-
+     
             tests = document['test_statuses']
+            patient_obj = Patient.where(:patient_number => patient_id)                
+            patient_obj = patient_obj.first unless patient_obj.blank?
+                  if patient_obj.blank?
+                        patient_obj = patient_obj.create(
+                                          patient_number: patient_id,
+                                          name:  patient_f_name  +" "+  patient_l_name,
+                                          email:  patient_email,
+                                          dob: Time.new.strftime("%Y%m%d%H%M%S"),
+                                          gender: patient_gender,
+                                          phone_number: patient_phone,
+                                          address: "",
+                                          external_patient_number:  "" 
 
+                                          )                           
+                  end
+            p_id = patient_obj.id
             tests.each do |tst_name,tst_value|              
               test_id = OrderService.get_test_type_id(tst_name)
               test_status = tst_value[tst_value.keys[tst_value.keys.count - 1]]['status']
@@ -57,9 +73,9 @@ module  OrderService
               updated_by_phone_number = tst_value[tst_value.keys[tst_value.keys.count - 1]]['updated_by']['phone_number']
               
               tst_obj =  Test.create(
-                        :specimen_id => tracking_number,
+                        :specimen_id => sp.id,
                         :test_type_id => test_id,
-                        :visit_id => visit_id,
+                        :patient_id => p_id,
                         :created_by => who_order_f_name + " " + who_order_l_name,
                         :panel_id => '',
                         :time_created => date_created,
@@ -100,11 +116,11 @@ module  OrderService
                 end    
               end                
             end
-        end
+       puts "---------done------------"
     end
 
     def self.check_order(tracking_number)
-      res =  Speciman.find_by_sql("SELECT id AS track_id FROM specimen WHERE id='#{tracking_number}'")
+      res =  Speciman.find_by_sql("SELECT id AS track_id FROM specimen WHERE tracking_number='#{tracking_number}'")
       if !res.blank?
         return true
       else
@@ -196,8 +212,8 @@ module  OrderService
             sample_type_id = OrderService.get_specimen_type_id(sample_type)
             sample_status_id = OrderService.get_specimen_status_id(sample_status)
 
-            Speciman.where(:id => tracking_number).update_all(
-                        :id => tracking_number,
+           Speciman.where(:tracking_number => tracking_number).update_all(
+                        :tracking_number => tracking_number,
                         :specimen_type_id =>  sample_type_id,
                         :specimen_status_id =>  sample_status_id,
                         :priority => priority,
@@ -207,14 +223,34 @@ module  OrderService
                         :target_lab => receiving_facility,
                         :art_start_date => Time.now,
                         :sending_facility => sending_facility,
+                        :ward_id => ward_id,
                         :requested_by => "",
                         :district => district,
                         :date_created => date_created
             )
+            sp = Speciman.find_by(:tracking_number =>  tracking_number)
+            patient_obj = Patient.where(:patient_number => patient_id)                
+            patient_obj = patient_obj.first unless patient_obj.blank?
+                  if patient_obj.blank?
+                        patient_obj = patient_obj.create(
+                                          patient_number: patient_id,
+                                          name:  patient_f_name  +" "+  patient_l_name,
+                                          email:  patient_email,
+                                          dob: Time.new.strftime("%Y%m%d%H%M%S"),
+                                          gender: patient_gender,
+                                          phone_number: patient_phone,
+                                          address: "",
+                                          external_patient_number:  "" 
 
-
+                                          )                           
+                  end
+            p_id = patient_obj.id
+            puts sp.id
+            puts "-------------here here------------------"
+            puts "yes --------------------"
+            puts document['test_statuses']
             tests = document['test_statuses']
-
+            
             tests.each do |tst_name,tst_value|              
               test_id = OrderService.get_test_type_id(tst_name)
               test_status = tst_value[tst_value.keys[tst_value.keys.count - 1]]['status']
@@ -223,11 +259,11 @@ module  OrderService
               updated_by_first_name = tst_value[tst_value.keys[tst_value.keys.count - 1]]['updated_by']['first_name']
               updated_by_last_name = tst_value[tst_value.keys[tst_value.keys.count - 1]]['updated_by']['last_name']
               updated_by_phone_number = tst_value[tst_value.keys[tst_value.keys.count - 1]]['updated_by']['phone_number']
-              tst_obj =  Test.where(:specimen_id => tracking_number, :test_type_id => test_id).first
-              Test.where(:specimen_id => tracking_number, :test_type_id => test_id).update_all(
-                      :specimen_id => tracking_number,
+              tst_obj =  Test.where(:specimen_id => sp.id, :test_type_id => test_id).first
+              Test.where(:specimen_id => sp.id, :test_type_id => test_id).update_all(
+                      :specimen_id => sp.id,
                       :test_type_id => test_id,
-                      :visit_id => "1732",
+                      :patient_id => p_id,
                       :created_by => who_order_f_name + " " + who_order_l_name,
                       :panel_id => '',
                       :time_created => date_created,
@@ -284,16 +320,14 @@ module  OrderService
                 test_results['results'].keys.each do |ms|                  
                   measur_id = OrderService.get_measure_id(ms)
                   rst = test_results['results'][ms]  
-                  res = TestResult.find_by_sql("SELECT count(*) AS t_count FROM test_results WHERE measure_id='#{measur_id}' AND test_id='#{tst_obj.id}'")[0]
-                  puts "helo-----------------check------------"
-                  puts res['t_count']
+                  res = TestResult.find_by_sql("SELECT count(*) AS t_count FROM test_results WHERE measure_id='#{measur_id}' AND test_id='#{tst_obj.id}'")[0]                           
                   if res['t_count'] != 0
                     TestResult.where(:measure_id => measur_id, :test_id => tst_obj.id).update_all(
                             measure_id: measur_id,
                             test_id: tst_obj.id,
                             result: rst['result_value'],	
                             device_name: '',						
-                            time_entered: '2018-09-21 04:38:02' # ms['date_result_given']
+                            time_entered: rst['date_result_entered']	 # ms['date_result_given']
                       )  
                   else
                     TestResult.create(
@@ -301,7 +335,7 @@ module  OrderService
                             test_id: tst_obj.id,
                             result: rst['result_value'],	
                             device_name: '',						
-                            time_entered: '2018-09-21 04:38:02' # ms['date_result_given']
+                            time_entered: rst['date_result_entered'] # ms['date_result_given']
                       )                     
                   end
                 end    

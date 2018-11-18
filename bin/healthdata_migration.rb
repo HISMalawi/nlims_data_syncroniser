@@ -41,6 +41,9 @@ rescue
     ress = JSON.parse(RestClient.put(url,:content_type => "application/json"))
     puts "NLIMS database initialised" 
 end
+File.open("#{Rails.root}/public/orders_with_no_patients.json", 'w') {|f|    
+f.write({:samples => []}.to_json) }
+
 con = Mysql2::Client.new(:host => host,
                          :username => user,
                          :password => password,
@@ -51,13 +54,20 @@ bart2_con = Mysql2::Client.new(:host => host,
                                :password => password,
                                :database => art_db)
 
-total = con.query("SELECT COUNT(*) total FROM Lab_Sample INNER JOIN LabTestTable ON LabTestTable.AccessionNum = Lab_Sample.AccessionNum").first["total"].to_i
-samples = con.query("SELECT * FROM Lab_Sample INNER JOIN LabTestTable ON LabTestTable.AccessionNum = Lab_Sample.AccessionNum")
+total = con.query("SELECT COUNT(*) total FROM Lab_Sample INNER JOIN LabTestTable ON LabTestTable.AccessionNum = Lab_Sample.AccessionNum").first["total"].to_i # counting orders to be migrated
+samples = con.query("SELECT * FROM Lab_Sample INNER JOIN LabTestTable ON LabTestTable.AccessionNum = Lab_Sample.AccessionNum") # retrieving the orders
 
-def create_concept(con)
-  concept_id = con.query("SELECT concept.concept_id AS concept_id FROM concept_name 
+# creating observation for inserting order to openmrs
+def get_concept(con,type)
+    if type == "Blood"
+        concept_id = con.query("SELECT concept.concept_id AS concept_id FROM concept_name 
+                        INNER JOIN concept ON concept.concept_id = concept_name.concept_id
+                        WHERE concept_name.name='CD4/CD8'").as_json[0]['concept_id']
+    else
+        concept_id = con.query("SELECT concept.concept_id AS concept_id FROM concept_name 
                         INNER JOIN concept ON concept.concept_id = concept_name.concept_id
                         WHERE concept_name.name='HIV viral load'").as_json[0]['concept_id']
+    end  
   return concept_id
 end
 
@@ -66,31 +76,41 @@ def get_uuid(con)
   return uuid
 end
 
+# creating observation for inserting order to openmrs
 def create_encounter(con,patient_id,location_id,date_created,orderer)    
     encounter_date = date_created 
     creator = orderer
     date_created = date_created
     voided = 0
     provider = 92
-    voided_by = 1
-    date_voided = date_created
-    void_reason = ""    
-    changed_by = 1
-    date_Changed = date_created
     encounter_id = order_counter = con.query("SELECT MAX(encounter_id) AS total FROM encounter").as_json[0]['total'].to_i +  1
     uuid = get_uuid(con)
     encounter_type = con.query("SELECT encounter_type_id AS encout_type FROM encounter_type WHERE name ='LAB'").as_json[0]['encout_type']
-    con.query("INSERT INTO encounter (encounter_id,encounter_type,patient_id,provider_id,location_id,encounter_datetime,creator,date_created,voided,voided_by,date_voided,void_reason,uuid,changed_by,date_changed) 
-                VALUES('#{encounter_id}','#{encounter_type}','#{patient_id}','#{provider}','#{location_id}','#{encounter_date}','#{creator}','#{date_created}','#{voided}','#{voided_by}','#{date_voided}','#{void_reason}','#{uuid}','#{changed_by}','#{date_created}')")
+    con.query("INSERT INTO encounter (encounter_id,encounter_type,patient_id,provider_id,location_id,encounter_datetime,creator,date_created,voided,uuid) 
+                VALUES('#{encounter_id}','#{encounter_type}','#{patient_id}','#{provider}','#{location_id}','#{encounter_date}','#{creator}','#{date_created}','#{voided}','#{uuid}')")
     return encounter_id
+end
+
+# creating observation for inserting order to openmrs
+def create_observation(con,person_id,encounter_id,location_id,concept_id,datetime)
+    uuid = get_uuid(con)
+    obs_datetime = datetime
+    obs_id = obs_counter = con.query("SELECT MAX(obs_id) AS total FROM obs").as_json[0]['total'].to_i +  1
+    con.query("INSERT INTO obs (obs_id,person_id,concept_id,encounter_id,obs_datetime,location_id,creator,date_created,voided,uuid)
+        VALUES('#{obs_id}','#{person_id}','#{concept_id}','#{encounter_id}','#{obs_datetime}','#{location_id}','#{4}','#{obs_datetime}','#{0}','#{uuid}')
+    ")
+    return obs_id
 end
 
 no_result_dates = []
 orders_with_no_patients = []
-
+order = {}
+migrated_orders = 0
+results_checker = false
+date_given = ''
 
 samples.each_with_index do |row, i|
-    #puts "#{(i + 1)}/#{total}" 
+    #puts "#{(i + 1)}/#{total}" # progress update
     patient = bart2_con.query(
                     "SELECT n.given_name, n.middle_name, n.family_name, p.birthdate, p.gender, pid2.identifier npid, pid2.patient_id npid2
             FROM patient_identifier pid
@@ -99,19 +119,18 @@ samples.each_with_index do |row, i|
                         INNER JOIN patient_identifier pid2 ON pid2.patient_id = pid.patient_id AND pid2.voided = 0
                     WHERE pid.identifier = '#{row['PATIENTID']}' AND pid2.voided = 0
                     ").as_json[0] # rescue {}
-
+    id__ = row['OrderedBy']
     orderer = bart2_con.query(
                     "SELECT n.given_name, n.middle_name, n.family_name FROM users u
                         INNER JOIN person_name n ON n.person_id = u.person_id
-                    WHERE u.user_id = '#{row['OrderedBy']}' AND n.voided = 0 
+                    WHERE u.user_id = '#{id__}' AND n.voided = 0 
                                         ORDER BY u.date_created DESC
                     ").as_json[0] rescue {}
 
     tests = con.query("SELECT TestOrdered FROM LabTestTable WHERE AccessionNum = #{row['AccessionNum']}").as_json.collect{|h| 
             h["TestOrdered"] = "Viral Load" if h["TestOrdered"] == "HIV_viral_load"
             h["TestOrdered"]
-    }
-
+    }  
     results = con.query("SELECT * FROM Lab_Parameter       
         WHERE Sample_ID = #{row['Sample_ID']}").as_json
     
@@ -119,19 +138,25 @@ samples.each_with_index do |row, i|
     formatted_results = {}
     time = ""
     formatted_results_value = {}
-    sample_status = ""
+    sample_type = ""
     status_details = {}
-    sample_statuses = {}
+    sample_typees = {}
     test_statues = {}
     test_status = {}
     date_created = (row['OrderDate'].blank? ? "" : "#{row['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{row['OrderTime'].to_time.strftime('%H%M%S')}")
+    if orderer.blank?
+        #tracking the orderer for the tests, do not continue below if the orderer is not present
+        next
+    end
+    
+    # giving the tests the initial status of Drawn as the first status when created
     status_details[date_created] = {
         "status" => "Drawn",
         "updated_by":  {
-                :first_name => "",
-                :last_name => "",
+                :first_name => orderer['given_name'],
+                :last_name => orderer['family_name'],
                 :phone_number =>  "",
-                :id => ""
+                :id => row['OrderedBy']
                 }
     }
     test_statues[tests[0]] = status_details
@@ -145,27 +170,22 @@ samples.each_with_index do |row, i|
         else
             
         end
-        
+        rst['TestName'] = "Viral Load" if rst['TestName'] == "HIV_DNA_PCR"  || rst['TestName'] == "HIV_RNA_PCR"
         formatted_results_value[rst['TestName']] = { 
                     :result_value => "",
                     :date_result_entered => ""
-        } 
+        }         
         
-        rst['TestName'] = "Viral_Load" if rst['TestName'] == "HIV_DNA_PCR"
-        if rst['TestName'] == "Viral_Load"
-            sample_status = "DBS (Free drop to DBS card)"
-        else
-            sample_status = "Blood"
-        end
+       
         test_status[rst['TestName']] = status_details      
-        next if rst['TESTVALUE'].blank?
+        next if rst['TESTVALUE'].blank? # no result for the test's measure eg CD4 test, measure CD4_Count having no result
         time = rst['TimeStamp'].to_datetime.strftime("%Y%m%d%H%M%S") if !rst['TimeStamp'].blank?
         if rst['TimeStamp'].blank?            
             details = {
             "sample_id": row['Sample_ID'],
             "test": rst['TestName']
             } 
-            no_result_dates.push([details])
+            no_result_dates.push([details]) # tracking results with no timestamp for the results entry
         end 
         time = Time.new.strftime("%Y%m%d%H%M%S") if rst['TimeStamp'].blank?
         time =  order_date if time < order_date            
@@ -176,10 +196,39 @@ samples.each_with_index do |row, i|
         counter_control = counter_control + 1           
     end    
     # end getting results-------------------------------------------
+
+        #determing a test's status depending on the results availability, thus started if one or more test's measures is not having result, having verified if all test's measures are having results
         if counter_control < results.length
             test_statues[tests[0]][time] = {
                 "status" => "started",
                 "updated_by":  {
+                        :first_name => orderer['given_name'],
+                        :last_name => orderer['family_name'],
+                        :phone_number =>  "",
+                        :id => row['OrderedBy']
+                        }
+            }
+        elsif  counter_control >= results.length
+            test_statues[tests[0]][time] = {
+                "status" => "verified",
+                "updated_by":  {
+                        :first_name => orderer['given_name'],
+                        :last_name => orderer['family_name'],
+                        :phone_number =>  "",
+                        :id => row['OrderedBy']
+                        }
+            }
+            results_checker = true
+            date_given = time
+        elsif counter_control == 1
+            tests_with_no_results = tests_with_no_results + 1 
+        end
+
+        #assigning results to the test
+        if formatted_results_value.blank?
+            formatted_results[tests[0]] = {
+                    "results" => formatted_results_value,
+                    "result_entered_by" => {
                         :first_name => "",
                         :last_name => "",
                         :phone_number =>  "",
@@ -187,27 +236,26 @@ samples.each_with_index do |row, i|
                         }
             }
         else
-            test_statues[tests[0]][time] = {
-                "status" => "verified",
-                "updated_by":  {
-                        :first_name => "",
-                        :last_name => "",
+            formatted_results[tests[0]] = {
+                    "results" => formatted_results_value,
+                    "result_entered_by" => {
+                        :first_name => orderer['given_name'],
+                        :last_name => orderer['family_name'],
                         :phone_number =>  "",
-                        :id => ""
+                        :id => row['OrderedBy']
                         }
             }
         end
 
-        formatted_results[tests[0]] = {
-                "results" => formatted_results_value,
-                "result_entered_by" => {
-                    :first_name => "",
-                    :last_name => "",
-                    :phone_number =>  "",
-                    :id => ""
-                    }
-        }
- 
+        #determining sample type for the sample
+        if row['TestOrdered'] == "HIV_viral_load"
+            sample_type = "DBS (Free drop to DBS card)"
+        else
+            sample_type = "Blood"
+        end
+
+        
+        # recording the tests xxxxx
         if !no_result_dates.blank?
             File.open("#{Rails.root}/public/no_result_dates", 'a') {|f|
             f.write(no_result_dates) }
@@ -215,100 +263,104 @@ samples.each_with_index do |row, i|
         end
     
         if patient.blank?
-            orders_with_no_patients.push(row['Sample_ID'])
-            File.open("#{Rails.root}/public/orders_with_no_patients", 'a') {|f|    
-            f.write(orders_with_no_patients) }
-            orders_with_no_patients = []            
+            orders_with_no_patients.push(row['Sample_ID'].to_s)      
+            next
+        elsif patient['npid'].blank?
+            File.open("#{Rails.root}/public/patients_missing_IDs", 'a') {|f|    
+            f.write({'sample_id' =>  {'patient_given_name' => patient['given_name'], 'patient_family_name' => patient['family_name']}}) }
             next
         end
-  
+        
+        # generating tracking number
         t_num =  TrackingNumberService.generate_tracking_number()
         TrackingNumberService.prepare_next_tracking_number
         puts t_num     
         who_order = {}
-        who_order["who_order_test"] = {
-            "first_name"=> "",
-            "last_name"=> "",
-            "id_number"=> "",
+        who_order = {
+            "first_name"=> orderer['given_name'],
+            "last_name"=> orderer['family_name'],
+            "id_number"=> row['OrderedBy'],
             "phone_number"=> ""
         }    
         patient_ = {
                 :first_name =>  patient['given_name'],
-                :last_name =>patient['family_name'],
+                :last_name => patient['family_name'],
                 :phone_number => "",
                 :id => patient["npid"],
                 :email => "",
                 :date_of_birth => "#{patient['birthdate'].to_date.strftime('%Y%m%d')}000000",
                 :gender => patient['gender'] 
         }      
-        sample_statuses[date_created] = {
+        sample_typees[date_created] = {
             "status": "specimen_accepted",
             "updated_by": {
-                "first_name": "mwatha",
-                "last_name": "mwatha",
-                "phone_number": "992",
-                "id": "283282"
+                "first_name": orderer['given_name'],
+                "last_name": orderer['family_name'],
+                "phone_number": "",
+                "id": row['OrderedBy']
             }
         }
-
+      
+        # saving order to national LIMS 
+        start_date = (row['OrderDate'].blank? ? "" : "#{row['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{row['OrderTime'].to_time.strftime('%H%M%S')}")
         res =  Order.create(
-                _id: t_num,
-                sample_type: sample_status,
+                tracking_number: t_num,
+                sample_type: sample_type,
                 date_created: (row['OrderDate'].blank? ? "" : "#{row['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{row['OrderTime'].to_time.strftime('%H%M%S')}"),
                 sending_facility: $settings['site_name'],
                 receiving_facility: $settings['target_lab'],
                 tests: tests,
                 test_results: formatted_results,
                 patient: patient_,
-                order_location: row['Location'],
+                order_location: "OPD 1",
                 district: $settings['district'],
                 priority: "Routine",
                 who_order_test: who_order,
-                sample_statuses: sample_statuses,
+                sample_statuses: sample_typees,
                 test_statuses: test_statues,
                 sample_status: "specimen_accepted",
                 art_start_date: (patient['start_date'].to_datetime.strftime("%Y%m%d%H%M%S") rescue nil), 
             ) 
-        
-    if res['_id'] == t_num
+
+    # saving order to openmrs
+    if res['tracking_number'] == t_num
+        c_id = res['_id']
         order_type = "4" # standing for LAB order
-        orderer_id = "4"  
-        instructions = ""
-        start_date = (row['OrderDate'].blank? ? "" : "#{row['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{row['OrderTime'].to_time.strftime('%H%M%S')}")
-        expiry_date = (row['OrderDate'].blank? ? "" : "#{row['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{row['OrderTime'].to_time.strftime('%H%M%S')}")
-        discountined = 0
-        discountined_date = (row['OrderDate'].blank? ? "" : "#{row['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{row['OrderTime'].to_time.strftime('%H%M%S')}")
-        discountined_by = "4"
-        discountined_reason = 1
-        creator = "4"
+        orderer_id = row['OrderedBy']        
+        discontinued = 0       
+        creator = row['OrderedBy']
         date_created = (row['OrderDate'].blank? ? "" : "#{row['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{row['OrderTime'].to_time.strftime('%H%M%S')}")
-        voided = 0
-        voided_by = ""
-        voided_date = (row['OrderDate'].blank? ? "" : "#{row['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{row['OrderTime'].to_time.strftime('%H%M%S')}")
-        voided_reason = ""
+        voided = 0      
         patient_id = patient['npid2']
         accession_number = t_num
-        obs_id = 1
-        
-        discountined_reason_non_coded = ""
         order_location =  265
-
-        concept_id = create_concept(bart2_con)
+        concept_id =  get_concept(bart2_con,sample_type)
         encouter_id = create_encounter(bart2_con,patient_id,order_location,date_created,orderer_id)   
+        obs_id = create_observation(bart2_con,patient['npid2'],encouter_id,order_location,concept_id,date_created)
 
         order_counter = bart2_con.query("SELECT MAX(order_id) AS total FROM orders").as_json[0]['total'].to_i +  1
         uuid = get_uuid(con)
-        bart2_con.query("INSERT INTO orders VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{instructions}','#{start_date}','#{expiry_date}','#{discountined}','#{discountined_date}','#{discountined_by}','#{discountined_reason}','#{creator}','#{date_created}','#{voided}','#{voided_by}','#{voided_date}','#{voided_reason}','#{patient_id}','#{accession_number}','#{obs_id}','#{uuid}','#{discountined_reason_non_coded}')")
-        
-    end
-
+        if results_checker == false
+         bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,patient_id,accession_number,uuid)
+                VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{patient_id}','#{accession_number}','#{uuid}')")
+        else
+            voided = 1
+            date_voided = date_given
+            voided_by = row['OrderedBy']
+            void_reason = "result given"
+            bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,date_voided,voided_by,void_reason,patient_id,accession_number,uuid)
+            VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{date_voided}','#{voided_by}','#{void_reason}','#{patient_id}','#{accession_number}','#{uuid}')")
+        end
+        migrated_orders = migrated_orders + 1
+    end   
+    
 end
 
-
-
-def create_observation()
-
-end
-
+    order['samples'] = orders_with_no_patients
+    File.open("#{Rails.root}/public/orders_with_no_patients.json", 'w') {|f|    
+    f.write(order.to_json) }
 
 puts "Done!!"
+puts "Total Orders: " + total.to_s
+puts "Orders Migrated: " + migrated_orders.to_s
+puts "Orders without patients: " + orders_with_no_patients.length.to_s
