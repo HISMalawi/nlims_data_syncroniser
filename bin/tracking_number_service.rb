@@ -15,16 +15,16 @@ module TrackingNumberService
         File.open("#{Rails.root}/public/tracker.json", 'w') {|f|
             
                 f.write(fi.to_json) } 
-        value =  "001"
+        value =  "1000"
         tracking_number = "X" + site_code + year.to_s +  get_month(month).to_s +  get_day(day).to_s + value.to_s        
       else
         key = file.keys      
           if todate > key[0]
             fi = {}
-            fi[todate] = 1
+            fi[todate] = 1000
             File.open("#{Rails.root}/public/tracker.json", 'w') {|f|                
                     f.write(fi.to_json) } 
-              value =  "001"
+              value =  "1000"
               tracking_number = "X" + site_code + year.to_s +  get_month(month).to_s +  get_day(day).to_s + value.to_s            
           else
             counter = file[todate]
