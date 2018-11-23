@@ -13,12 +13,14 @@ class CouchdbMysqlSynchroniser
           f.write(seq)
         }
       end
-      username = "root"
-      password = "amin9090!"
-      db_name = "nlims_order_repo"
-      ip = "localhost"
-      port = "5984"
-      protocol = "http"
+
+      config = YAML.load("#{Rails.root}/config/couchdb.yml") [Rails.ENV]
+      username = config['username']
+      password = config['password']
+      db_name = config['prefix'].to_s +  "_order_" +  config['suffix'].to_s
+      ip = config['host']
+      port = config['port']
+      protocol = config['protocol']
       seq = File.read("#{Rails.root}/tmp/couch_seq_number")
       res = JSON.parse(RestClient.get("#{protocol}://#{username}:#{password}@#{ip}:#{port}/#{db_name}/_changes?include_docs=true&limit=30&since=#{seq}"))
       docs = res['results']
@@ -33,7 +35,6 @@ class CouchdbMysqlSynchroniser
         if OrderService.check_order(tracking_number) == true         
           OrderService.update_order(document,tracking_number)
         else       
-          puts "amin--------------------"
           OrderService.create_order(document,tracking_number,couch_id)         
         end
       end

@@ -1,7 +1,7 @@
 module  OrderService
 
     def self.create_order(document,tracking_number,couch_id)
-        puts tracking_number    
+     
             document = document['doc']            
             patient_id = document['patient']['id']
             patient_f_name = document['patient']['first_name']
@@ -245,10 +245,7 @@ module  OrderService
                                           )                           
                   end
             p_id = patient_obj.id
-            puts sp.id
-            puts "-------------here here------------------"
-            puts "yes --------------------"
-            puts document['test_statuses']
+           
             tests = document['test_statuses']
             
             tests.each do |tst_name,tst_value|              
