@@ -219,7 +219,8 @@ samples.each_with_index do |row, i|
                         }
             }
             results_checker = true
-            date_given = time
+            time = Time.new.strftime("%Y%m%d%H%M%S") if time.blank?
+            date_given = time 
         elsif counter_control == 1
             tests_with_no_results = tests_with_no_results + 1 
         end
