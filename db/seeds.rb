@@ -6,16 +6,8 @@
 #   movies = Movie.create([{ name: 'Star Wars' }, { name: 'Lord of the Rings' }])
 #   Character.create(name: 'Luke', movie: movies.first)
 
-
-
-
-
-
 sites = YAML.load_file("#{Rails.root}/public/sites.yml")
-
-
 sites.each do |key,site|
-
 	site.each do |s|
 		Site.create(
 				name: s['facility'],
@@ -34,5 +26,3 @@ sites.each do |key,site|
 			)
 	end
 end
-
-

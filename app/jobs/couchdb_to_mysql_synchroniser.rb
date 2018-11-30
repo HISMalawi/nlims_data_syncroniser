@@ -13,8 +13,9 @@ class CouchdbMysqlSynchroniser
           f.write(seq)
         }
       end
-
-      config = YAML.load("#{Rails.root}/config/couchdb.yml") [Rails.ENV]
+    
+      config = YAML.load_file("#{Rails.root}/config/couchdb.yml") [Rails.env]
+    
       username = config['username']
       password = config['password']
       db_name = config['prefix'].to_s +  "_order_" +  config['suffix'].to_s
@@ -28,8 +29,10 @@ class CouchdbMysqlSynchroniser
       File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
           f.write(seq)
       }     
+     
       docs.each do |document|
-             
+        puts "-------------------------"
+        puts document
         tracking_number = document['doc']['tracking_number']
         couch_id =  document['doc']['_id']
         if OrderService.check_order(tracking_number) == true         

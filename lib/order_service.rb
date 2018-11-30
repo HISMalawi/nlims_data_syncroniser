@@ -1,7 +1,7 @@
 module  OrderService
 
     def self.create_order(document,tracking_number,couch_id)
-     
+            puts "migrating--------------------------------"
             document = document['doc']            
             patient_id = document['patient']['id']
             patient_f_name = document['patient']['first_name']
@@ -185,6 +185,7 @@ module  OrderService
 
 
     def self.update_order(document,tracking_number)
+            puts "migrating v2--------------------------------"
             document = document['doc']            
             patient_id = document['patient']['id']
             patient_f_name = document['patient']['first_name']
