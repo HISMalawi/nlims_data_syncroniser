@@ -15,7 +15,6 @@ class CouchdbMysqlSynchroniser
       end
     
       config = YAML.load_file("#{Rails.root}/config/couchdb.yml") [Rails.env]
-    
       username = config['username']
       password = config['password']
       db_name = config['prefix'].to_s +  "_order_" +  config['suffix'].to_s
@@ -29,7 +28,8 @@ class CouchdbMysqlSynchroniser
       File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
           f.write(seq)
       }     
-     
+      puts "hello--------------"
+     puts docs
       docs.each do |document|
         puts "-------------------------"
         puts document

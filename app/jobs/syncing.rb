@@ -11,6 +11,8 @@ class Sync
         site_name = settings['site_name']
         r_host = ""
         r_port = ""
+        l_host = ""
+        l_port = "" 
         r_username = ""
         r_password = ""
         remote_address = ""
@@ -25,8 +27,10 @@ class Sync
                 c_password = r.couch_password
                 
                 if r.name == site_name 
-                    username = couchdb_acc['username']
-                    password = couchdb_acc['password'] 
+                    username =  c_username
+                    password = c_password 
+                    l_host = host
+                    l_port = port 
                     local_address = "http://#{username}:#{password}@#{host}:#{port}/#{db_name}"                     
                 else
                     username = c_username
@@ -37,7 +41,7 @@ class Sync
                 end
             end
         
-            `curl -X POST http://#{couchdb_acc['host']}:#{couchdb_acc['port']}/_replicate -d '{"source":"#{local_address}","target":"#{remote_address}","create_target":  true, "continuous":true}' -H "Content-Type: application/json"`
+            `curl -X POST http://#{l_host }:#{l_port}/_replicate -d '{"source":"#{local_address}","target":"#{remote_address}","create_target":  true, "continuous":true}' -H "Content-Type: application/json"`
             `curl -X POST http://#{r_host}:#{r_port}/_replicate -d '{"source":"#{remote_address}","target":"#{local_address}","create_target":  true, "continuous":true}' -H "Content-Type: application/json"`
          
             puts r_host
