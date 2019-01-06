@@ -8,7 +8,7 @@ class TestCatelogExtractor
   
     begin
        
-      dat = TestCatelog.extract_catelog
+      dat = TestCatelog.extract_catelog_by_tests
       if !dat.blank?
         if !File.exists?("#{Rails.root}/../nlims_controller/public/test_catelog.json")
           FileUtils.touch("#{Rails.root}/../nlims_controller/public/test_catelog.json")          

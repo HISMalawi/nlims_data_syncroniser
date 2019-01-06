@@ -1,0 +1,2 @@
+class PanelType < ApplicationRecord
+end
