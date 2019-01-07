@@ -1,3 +1,3 @@
 require "syncing.rb"
 
-Sync.perform_in(0)
+#Sync.perform_in(0)
