@@ -1,7 +1,231 @@
 module  OrderService
 
+    def self.create_order_v2(params, tracking_number, couch_id)
+      couch_order = 0
+      ActiveRecord::Base.transaction do 
+ 
+            npid = params[:patient][:id]
+            patient_obj = Patient.where(:patient_number => npid)          
+            patient_obj = patient_obj.first unless patient_obj.blank?
+
+                  if patient_obj.blank?
+                        patient_obj = patient_obj.create(
+                                          patient_number: npid,
+                                          name: params[:patient][:first_name] +" "+ params[:patient][:last_name],
+                                          email: '' ,
+                                          dob: params[:patient][:date_of_birth],
+                                          gender: params[:patient][:gender],
+                                          phone_number: params[:patient][:phone_number],
+                                          address: "",
+                                          external_patient_number:  "" 
+                                          )
+                           
+                  end
+
+                              
+            who_order = {
+                  :first_name => params[:who_order_test][:first_name],
+                  :last_name => params[:who_order_test][:last_name],
+                  :phone_number => params[:who_order_test][:phone_number],
+                  :id => params[:who_order_test][:id_number]
+            }
+
+            patient = {
+                  :first_name => params[:patient][:first_name],
+                  :last_name => params[:patient][:last_name],
+                  :phone_number => params[:patient][:phone_number],
+                  :id => npid,
+                  :email => params[:patient][:email],
+                  :gender => params[:patient][:gender] 
+            }
+            sample_status =  {}
+            test_status = {}
+            time = params[:date_created] 
+            sample_status[time] = {
+                  "status" => "Drawn",
+                        "updated_by":  {
+                              :first_name => params[:who_order_test][:first_name],
+                              :last_name => params[:who_order_test][:last_name],
+                              :phone_number => params[:patient][:phone_number],
+                              :id => params[:who_order_test][:id] 
+                              }
+            }
+
+
+            sample_type_id = SpecimenType.get_specimen_type_id(params[:sample_type])
+            sample_status_id = SpecimenStatus.get_specimen_status_id(params[:sample_status])
+           
+
+      sp_obj =  Speciman.create(
+                  :tracking_number => tracking_number,
+                  :specimen_type_id =>  sample_type_id,
+                  :specimen_status_id =>  sample_status_id,
+                  :couch_id => '',
+                  :ward_id => Ward.get_ward_id(params[:order_location]),
+                  :priority => params[:priority],
+                  :drawn_by_id =>  params[:who_order_test][:id],
+                  :drawn_by_name =>  params[:who_order_test][:first_name].to_s + " " + params[:who_order_test][:last_name].to_s,
+                  :drawn_by_phone_number => params[:patient][:phone_number], 
+                  :target_lab => params[:receiving_facility],
+                  :art_start_date => Time.now,
+                  :sending_facility => params[:sending_facility],
+                  :requested_by =>  params[:requesting_clinician],
+                  :district => params[:district],
+                  :date_created => time
+            )
+
+            
+                  res = Visit.create(
+                           :patient_id => npid,
+                           :visit_type_id => '',
+                           :ward_id => Ward.get_ward_id(params[:order_location])
+                        )
+                  visit_id = res.id
+            var_checker = false
+            params[:tests].each do |tst|
+                  tst = tst.gsub("&amp;",'&')
+                  status = check_test(tst)
+                  if status == false
+                        details = {}
+                        details[time] = {
+                              "status" => "Drawn",
+                              "updated_by":  {
+                                :first_name => params[:who_order_test][:first_name],
+                                :last_name => params[:who_order_test][:last_name],
+                                :phone_number => params[:patient][:phone_number],
+                                :id => params[:who_order_test][:id] 
+                                }
+                        }
+                        test_status[tst] = details                  
+                        rst = TestType.get_test_type_id(tst)
+                        rst2 = TestStatus.get_test_status_id('drawn')
+
+                        t = Test.create(
+                              :specimen_id => sp_obj.id,
+                              :test_type_id => rst,
+                              :patient_id => patient_obj.id,
+                              :created_by => params[:who_order_test][:first_name].to_s + " " + params[:who_order_test][:last_name].to_s,
+                              :panel_id => '',
+                              :time_created => time,
+                              :test_status_id => rst2
+                        )
+                        if !params[:test_results].blank?
+                          r = params[:test_results][tst]
+                          r = r['results']
+                          measure_name = r.keys
+                          measure_name.each do |m|
+                            v = r[m]
+                            r_value = v[:result_value]
+                            date = v[:date_result_entered]
+                            m = Measure.where(name: measure_name).first
+                            m = m.id
+                            TestResult.create(
+                              :test_id => t.id,
+                              :measure_id => m,
+                              :result => r_value,
+                              :time_entered => date,
+                              :device_name => ''
+                            )
+                          end
+                          var_checker = true
+                        end
+
+                        if var_checker == true
+                          ts_st = TestStatus.where(name: 'verified').first
+                          tv = Test.find_by(:id => t.id)
+                          tv.test_status_id =  ts_st.id
+                          tv.save()
+                          var_checker = false
+                        end
+                  else
+                        pa_id = PanelType.where(name: tst).first
+                        res = TestType.find_by_sql("SELECT test_types.id FROM test_types INNER JOIN panels 
+                                                      ON panels.test_type_id = test_types.id
+                                                      INNER JOIN panel_types ON panel_types.id = panels.panel_type_id
+                                                      WHERE panel_types.id ='#{pa_id.id}'")
+                        res.each do |tt|
+                              details = {}
+                              details[time] = {
+                                    "status" => "Drawn",
+                                    "updated_by":  {
+                                        :first_name => params[:who_order_test][:first_name],
+                                        :last_name => params[:who_order_test][:last_name],
+                                        :phone_number => params[:patient][:phone_number],
+                                        :id => params[:who_order_test][:id] 
+                                        }
+                                }
+                              test_status[tst] = details                  
+                              #rst = TestType.get_test_type_id(tt)
+                              rst2 = TestStatus.get_test_status_id('drawn')
+                              t= Test.create(
+                                    :specimen_id => sp_obj.id,
+                                    :test_type_id => tt.id,
+                                    :patient_id => patient_obj.id,
+                                    :created_by => params[:who_order_test][:first_name] + " " + params[:who_order_test][:last_name],
+                                    :panel_id => '',
+                                    :time_created => time,
+                                    :test_status_id => rst2
+                              )
+
+                              if !params[:test_results].blank?
+                                r = params[:test_results][tst]
+                                r = r['results']
+                                measure_name = r.keys
+                                measure_name.each do |m|
+                                  v = r[m]
+                                  r_value = v[:result_value]
+                                  date = v[:date_result_entered]
+                                  m = Measure.where(name: measure_name).first
+                                  m = m.id
+                                  TestResult.create(
+                                    :test_id => t.id,
+                                    :measure_id => m,
+                                    :result => r_value,
+                                    :time_entered => date,
+                                    :device_name => ''
+                                  )
+                                end
+                                var_checker = true
+                              end
+      
+                              if var_checker == true
+                                ts_st = TestStatus.where(name: 'verified').first
+                                tv = Test.find_by(:id => t.id)
+                                tv.test_status_id =  ts_st.id
+                                tv.save()
+                                var_checker = false
+                              end
+                        end
+                  end
+            end
+
+           
+
+            sp = Speciman.find_by(:tracking_number => tracking_number)
+            sp.couch_id = couch_id
+            sp.save()
+            couch_order = couch_id
+      end              
+
+      return [true,tracking_number,couch_order]
+    end
+
+
+    def self.check_test(tst)
+
+      res = PanelType.find_by_sql("SELECT * FROM panel_types WHERE name ='#{tst}'")
+
+      if res.length > 0
+            return true
+      else
+            return false
+      end
+
+    end
+
     def self.create_order(document,tracking_number,couch_id)
             puts "migrating--------------------------------"
+            puts document
             document = document['doc']            
             patient_id = document['patient']['id']
             patient_f_name = document['patient']['first_name']

@@ -1,4 +1,5 @@
 require 'io/console'
+load "lib/order_service.rb"
 load "bin/tracking_number_service.rb"
 $settings = YAML.load_file("#{Rails.root}/config/application.yml")
 $configs = YAML.load_file("#{Rails.root}/config/couchdb.yml")[Rails.env]
@@ -62,11 +63,11 @@ def get_concept(con,type)
     if type == "Blood"
         concept_id = con.query("SELECT concept.concept_id AS concept_id FROM concept_name 
                         INNER JOIN concept ON concept.concept_id = concept_name.concept_id
-                        WHERE concept_name.name='CD4/CD8'").as_json[0]['concept_id']
+                        WHERE concept_name.name='Laboratory tests ordered'").as_json[0]['concept_id']
     else
         concept_id = con.query("SELECT concept.concept_id AS concept_id FROM concept_name 
                         INNER JOIN concept ON concept.concept_id = concept_name.concept_id
-                        WHERE concept_name.name='HIV viral load'").as_json[0]['concept_id']
+                        WHERE concept_name.name='Laboratory tests ordered'").as_json[0]['concept_id']
     end  
   return concept_id
 end
@@ -323,6 +324,25 @@ samples.each_with_index do |row, i|
                 art_start_date: (patient['start_date'].to_datetime.strftime("%Y%m%d%H%M%S") rescue nil), 
             ) 
 
+        data = {
+                tracking_number: t_num,
+                sample_type: sample_type,
+                date_created: (row['OrderDate'].blank? ? "" : "#{row['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{row['OrderTime'].to_time.strftime('%H%M%S')}"),
+                sending_facility: $settings['site_name'],
+                receiving_facility: $settings['target_lab'],
+                tests: tests,
+                test_results: formatted_results,
+                patient: patient_,
+                order_location: "OPD 1",
+                district: $settings['district'],
+                requesting_clinician: '',
+                priority: "Routine",
+                who_order_test: who_order,
+                sample_statuses: sample_typees,
+                test_statuses: test_statues,
+                sample_status: "specimen_accepted",
+                art_start_date: (patient['start_date'].to_datetime.strftime("%Y%m%d%H%M%S") rescue nil), 
+        }
     # saving order to openmrs
     if res['tracking_number'] == t_num
         c_id = res['_id']
@@ -345,7 +365,7 @@ samples.each_with_index do |row, i|
          bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,patient_id,accession_number,uuid)
                 VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{patient_id}','#{accession_number}','#{uuid}')")
         else
-            voided = 1
+            voided = 0
             date_voided = date_given
             voided_by = row['OrderedBy']
             void_reason = "result given"
@@ -354,6 +374,8 @@ samples.each_with_index do |row, i|
             bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,patient_id,accession_number,uuid)
                 VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{patient_id}','#{accession_number}','#{uuid}')")
         end
+        OrderService.create_order_v2(data,t_num,c_id)
+
         migrated_orders = migrated_orders + 1
     end   
     
