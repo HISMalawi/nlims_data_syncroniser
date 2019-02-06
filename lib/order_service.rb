@@ -82,9 +82,11 @@ module  OrderService
                         )
                   visit_id = res.id
             var_checker = false
+                  
             params[:tests].each do |tst|
                   tst = tst.gsub("&amp;",'&')
-                  status = check_test(tst)
+                  tstt = health_data_tests_types(tst)
+                  status = check_test(tstt)
                   if status == false
                         details = {}
                         details[time] = {
@@ -97,7 +99,7 @@ module  OrderService
                                 }
                         }
                         test_status[tst] = details                  
-                        rst = TestType.get_test_type_id(tst)
+                        rst = TestType.get_test_type_id(tstt)
                         rst2 = TestStatus.get_test_status_id('drawn')
 
                         t = Test.create(
@@ -110,24 +112,27 @@ module  OrderService
                               :test_status_id => rst2
                         )
                         if !params[:test_results].blank?
-                          r = params[:test_results][tst]
-                          r = r['results']
-                          measure_name = r.keys
-                          measure_name.each do |m|
-                            v = r[m]
-                            r_value = v[:result_value]
-                            date = v[:date_result_entered]
-                            m = Measure.where(name: measure_name).first
-                            m = m.id
-                            TestResult.create(
-                              :test_id => t.id,
-                              :measure_id => m,
-                              :result => r_value,
-                              :time_entered => date,
-                              :device_name => ''
-                            )
+                          if !r = params[:test_results][tst].blank?
+                            r = params[:test_results][tst]
+                            r = r['results']                     
+                            measure_name = r.keys
+                            measure_name.each do |m|                            
+                              v = r[m]
+                              r_value = v[:result_value]
+                              date = v[:date_result_entered]
+                              mm = check_health_data_measures(m)
+                              m = Measure.where(name: mm).first
+                              m = m.id
+                              TestResult.create(
+                                :test_id => t.id,
+                                :measure_id => m,
+                                :result => r_value,
+                                :time_entered => date,
+                                :device_name => ''
+                              )
+                            end
+                            var_checker = true
                           end
-                          var_checker = true
                         end
 
                         if var_checker == true
@@ -138,7 +143,7 @@ module  OrderService
                           var_checker = false
                         end
                   else
-                        pa_id = PanelType.where(name: tst).first
+                        pa_id = PanelType.where(name: tstt).first
                         res = TestType.find_by_sql("SELECT test_types.id FROM test_types INNER JOIN panels 
                                                       ON panels.test_type_id = test_types.id
                                                       INNER JOIN panel_types ON panel_types.id = panels.panel_type_id
@@ -157,35 +162,40 @@ module  OrderService
                               test_status[tst] = details                  
                               #rst = TestType.get_test_type_id(tt)
                               rst2 = TestStatus.get_test_status_id('drawn')
+                              updater =  params[:who_order_test][:first_name] + " " + params[:who_order_test][:last_name]  rescue nil
                               t= Test.create(
                                     :specimen_id => sp_obj.id,
                                     :test_type_id => tt.id,
                                     :patient_id => patient_obj.id,
-                                    :created_by => params[:who_order_test][:first_name] + " " + params[:who_order_test][:last_name],
+                                    :created_by => updater,
                                     :panel_id => '',
                                     :time_created => time,
                                     :test_status_id => rst2
                               )
 
                               if !params[:test_results].blank?
-                                r = params[:test_results][tst]
-                                r = r['results']
-                                measure_name = r.keys
-                                measure_name.each do |m|
-                                  v = r[m]
-                                  r_value = v[:result_value]
-                                  date = v[:date_result_entered]
-                                  m = Measure.where(name: measure_name).first
-                                  m = m.id
-                                  TestResult.create(
-                                    :test_id => t.id,
-                                    :measure_id => m,
-                                    :result => r_value,
-                                    :time_entered => date,
-                                    :device_name => ''
-                                  )
+                                if !params[:test_results][tst].blank?
+                                  r = params[:test_results][tst]
+                                  r = r['results']
+                                  measure_name = r.keys
+                                  measure_name.each do |m|
+                                    v = r[m]
+                                    r_value = v[:result_value]
+                                    date = v[:date_result_entered]
+                                    mm = check_health_data_measures(m)
+                                    puts m
+                                    m = Measure.where(name: mm).first
+                                    m = m.id
+                                    TestResult.create(
+                                      :test_id => t.id,
+                                      :measure_id => m,
+                                      :result => r_value,
+                                      :time_entered => date,
+                                      :device_name => ''
+                                    )
+                                  end
+                                  var_checker = true
                                 end
-                                var_checker = true
                               end
       
                               if var_checker == true
@@ -210,6 +220,151 @@ module  OrderService
       return [true,tracking_number,couch_order]
     end
 
+    def self.health_data_tests_types(name)
+        if name == 'Hep'
+          return "Hepatitis C Test"
+        elsif  name == "LFT"
+          return "Liver Function Tests"
+        elsif  name  == "Creat"
+          return "Creatinine Kinase"
+        elsif  name  == "Urinanal"
+          return "Urine Macroscopy"
+        elsif  name  == "MP"
+          return "Microprotein"
+        elsif  name  == "Full CSF analysis"
+          return "CSF Analysis"
+        elsif  name  == "Full CSF"
+          return "CSF Analysis"
+        elsif  name  == "Lactate"
+          return "Lipogram"
+        elsif  name  == "Crypto AG"
+          return "Cryptococcus Antigen Test"
+        elsif  name  == "U/E"
+          return "Uric Acid"
+        elsif  name  == "Full stool analysis"
+          return "Stool Analysis"
+        elsif  name  == "VDRL"
+          return "Viral Load"
+        elsif  name  == "Cholest"
+          return "Urine Chemistries"
+        elsif  name  == "RBS"
+          return "FBC"
+        elsif  name  == "Tg"
+          return "TT"
+        elsif  name  == "Uri C/S"
+          return "Urine Microscopy"
+        elsif  name  == "AAFB (2nd)"
+          return "Uric Acid"
+        elsif  name  == "AAFB (1nd)"
+          return "Uric Acid"
+        elsif  name  == "AAFB (3nd)"
+          return "Uric Acid"
+        elsif  name  == "AAFB 4nd)"
+          return "Uric Acid"
+        elsif  name  == "AAFB (5nd)"
+          return "Uric Acid"
+        elsif  name  == "Blood NOS"
+          return "FBC"
+        elsif  name  == "G/XM"
+          return "Urine Microscopy"
+        else          
+          return name
+        end
+    end
+
+    def self.check_health_data_measures(m)
+      if m == "CD4_count"
+        return "CD4 Count"
+      elsif m == "Bilirubin_total"
+        return "Bilirubin Total(BIT))"
+      elsif m == "Bilirubin_total"
+        return "Bilirubin Total(BIT))"
+      elsif  m == "Gamma Glutamyl transpeptidase"
+        return "Lipase"
+      elsif m == "Alanine_Aminotransferase"
+        return "Lipase"
+      elsif m == "Aspartate_Transaminase"
+        return "Lipase"
+      elsif  m == "CD3_percent"
+        return "CD4 %"
+      elsif m == "HIV_RNA_PCR"
+       return "Viral Load"
+      elsif m == "CD4_percent"
+        return "CD4 %" 
+      elsif  m == "CD8_percent"
+        return "CD4 %" 
+      elsif  m == "CD8Tube"
+        return "CD4 %" 
+      elsif  m == "CD8Tube"
+        return "CD4 Count" 
+      elsif  m == "WBC_percent"
+       return "WBC"
+      elsif m == "RBC"
+       return "RBC"
+      elsif  m == "RDW"
+        return "RDW-CV" 
+      elsif  m == "Platelet_count"
+        return "Platelet Comments"
+      elsif  m == "Phosphorus"
+        return "Phosphorus (PHOS)"
+      elsif m == "Neutrophil_percent"
+        return "Neutrophils" 
+      elsif  m == "Neutrophil_count"
+        return "Neutrophils" 
+      elsif m == "Monocyte_count"
+        return "Monocytes"
+      elsif m == "Malaria_Parasite_count"
+        return "Malaria Species" 
+      elsif  m == "Lymphocyte_percent"
+        return "Lymphocytes"
+      elsif  m == "Lymphocyte_count"
+        return "Lymphocyte Count"
+      elsif m == "Lactate"
+        return "Lactatedehydrogenase(LDH)"
+      elsif  m == "HepBsAg"
+        return "Hepatitis B"
+      elsif  m == "Hemoglobin"
+        return "HB"
+      elsif m == "WBC_count"
+        return "WBC"
+      elsif m == "Glucose_CSF"
+        return "Glucose"  
+      elsif  m == "Glucose_blood"
+        return "Glucose"
+      elsif  m == "Eosinophil_percent"
+        return "Eosinophils" 
+      elsif m == "Eosinophil_count"
+        return "Eosinophils" 
+      elsif m == "Cryptococcal_Antigen"
+        return "CrAg" 
+      elsif  m == "Cholesterol"
+        return "Cholestero l(CHOL)"
+      elsif m == "Urea_Nitrogen_blood"
+        return "Glucose" 
+      elsif  m == "Basophil_percent"
+        return "Basophils"
+      elsif m == "Basophil_count"
+        return "Basophils"
+      elsif m == "Monocyte_percent"
+        return "Monocytes"
+      elsif m == "Hematocrit"
+        return "HB"
+      elsif  m == "Triglycerides"
+        return "Triglycerides(TG)" 
+      elsif m == "Toxoplasma_IgG"
+        return "50:50 Normal Plasma" 
+      elsif  m == "Protein_total"
+        return "Total Proteins" 
+      elsif  m == "Glucose_CSF"
+       return "Glucose"
+      elsif m == "CD8_count"
+        return "CD8 Count"
+      elsif m = "Albumin"
+        return "Albumin(ALB)"
+      else
+        return m
+      end
+    end
 
     def self.check_test(tst)
 
@@ -224,8 +379,7 @@ module  OrderService
     end
 
     def self.create_order(document,tracking_number,couch_id)
-            puts "migrating--------------------------------"
-            puts document
+    
             document = document['doc']            
             patient_id = document['patient']['id']
             patient_f_name = document['patient']['first_name']
