@@ -60,6 +60,22 @@ else
     }
 end
 
+
+if !File.exists?("#{Rails.root}/public/orders_with_no_tests.json")
+    data = {}
+    FileUtils.touch("#{Rails.root}/public/orders_with_no_tests.json")   
+    data['Samples'] = []
+    File.open("#{Rails.root}/public/orders_with_no_tests.json","w"){ |w|
+        w.write(data.to_json)
+    }
+else
+    data = {}
+    data['Samples'] = []
+    File.open("#{Rails.root}/public/orders_with_no_tests.json","w"){ |w|
+        w.write(data.to_json)
+    }
+end
+
 con = Mysql2::Client.new(:host => host,
                          :username => user,
                          :password => password,
@@ -404,8 +420,13 @@ samples.each_with_index do |row, i|
             end         
         end
     else
-        orders_without_tests.push(row['Sample_ID'])
+            orders_without_tests.push(row['Sample_ID'])
             # order without tests
+            count = JSON.parse(File.read("#{Rails.root}/public/orders_with_no_tests.json"))
+            count['Samples'] = count['Samples'].push(row["Sample_ID"])
+
+            File.open("#{Rails.root}/public/orders_with_no_tests.json", 'w') {|f|
+            f.write(count.to_json)}
     end
     
     if !File.exists?("#{Rails.root}/public/sample_tracker") 
@@ -429,4 +450,4 @@ puts "Orders Not Migrated: " + (total.to_i - migrated_orders.to_i).to_s
 puts " "
 puts " "
 puts "Orders without patients: " + orders_with_no_patients.length.to_s
-puts "Migrated Orders without orderer:"        + orders_without_orderer.length.to_s
+puts "Orders without tests: "        + orders_without_tests.length.to_s
