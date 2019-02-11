@@ -60,6 +60,9 @@ else
     }
 end
 
+if !File.exists?("#{Rails.root}/public/sample_tracker")
+    FileUtils.touch("#{Rails.root}/public/sample_tracker")   
+end
 
 if !File.exists?("#{Rails.root}/public/orders_with_no_tests.json")
     data = {}
