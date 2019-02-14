@@ -401,6 +401,12 @@ module  OrderService
             who_order_f_name = document['who_order_test']['first_name']
             who_order_l_name = document['who_order_test']['last_name']
             who_order_phone_number = document['who_order_test']['phone_number']
+
+            recommended_examination = document['recommended_examination'] #Added to satisfy for TB lab request 
+            treatment_history = document['treatment_history'] #Added to satisfy for TB lab request
+            sample_date = document['sample_date'] #Added to satisfy for TB lab request
+            sample_source = document['sample_source'] #Added to satisfy for TB lab request
+
             
             ward_id = OrderService.get_ward_id(ward)
             sample_type_id = OrderService.get_specimen_type_id(sample_type)
@@ -421,7 +427,11 @@ module  OrderService
                   :requested_by => "",
                   :ward_id => 1,
                   :district => district,
-                  :date_created => date_created
+                  :date_created => date_created,
+                  :recommended_examination => recommended_examination, #Added to satisfy for TB lab request 
+                  :treatment_history => treatment_history, #Added to satisfy for TB lab request
+                  :sample_date => sample_date, #Added to satisfy for TB lab request
+                  :sample_source => sample_source #Added to satisfy for TB lab request
             )
      
             tests = document['test_statuses']
@@ -585,6 +595,12 @@ module  OrderService
             who_order_f_name = document['who_order_test']['first_name']
             who_order_l_name = document['who_order_test']['last_name']
             who_order_phone_number = document['who_order_test']['phone_number']
+
+            recommended_examination = document['recommended_examination'] #Added to satisfy for TB lab request 
+            treatment_history = document['treatment_history'] #Added to satisfy for TB lab request
+            sample_date = document['sample_date'] #Added to satisfy for TB lab request
+            sample_source = document['sample_source'] #Added to satisfy for TB lab request
+
             
             ward_id = OrderService.get_ward_id(ward)
                        
@@ -605,7 +621,11 @@ module  OrderService
                         :ward_id => ward_id,
                         :requested_by => "",
                         :district => district,
-                        :date_created => date_created
+                        :date_created => date_created,
+                        :recommended_examination => recommended_examination, #Added to satisfy for TB lab request 
+                        :treatment_history => treatment_history, #Added to satisfy for TB lab request
+                        :sample_date => sample_date, #Added to satisfy for TB lab request
+                        :sample_source => sample_source #Added to satisfy for TB lab request
             )
             sp = Speciman.find_by(:tracking_number =>  tracking_number)
             patient_obj = Patient.where(:patient_number => patient_id)                
