@@ -52,6 +52,11 @@ namespace :check_data_anomalise do
         order.date_dispatched = date_dispatched
         order.created_at = created_at
         order.updated_at = updated_at
+        sample_source = data.sample_source #Add to satisfy for TB lab requests
+        sample_date = data.sample_date #Add to satisfy for TB lab requests
+        recommended_examination = data.recommended_examination #Add to satisfy for TB lab requests
+        treatment_history = data.treatment_history #Add to satisfy for TB lab requests
+
         order.save()
         
         SlaveOrder.where(id: tracking_number).update_all(order_resolve_status: "resolved")
