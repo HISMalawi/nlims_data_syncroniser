@@ -89,15 +89,16 @@ bart2_con = Mysql2::Client.new(:host => host,
                                :password => password,
                                :database => art_db)
 
-    total = con.query("SELECT COUNT(*) total FROM Lab_Sample").first["total"].to_i # counting orders to be migrated
+   
 
 if opt.downcase.strip == "n"
     samples = con.query("SELECT * FROM Lab_Sample") # retrieving the orders
+    total = con.query("SELECT COUNT(*) total FROM Lab_Sample").first["total"].to_i # counting orders to be migrated
 else
     previous_sam = File.read("#{Rails.root}/public/sample_tracker") 
     samples = con.query("SELECT * FROM Lab_Sample WHERE Sample_ID >='#{previous_sam}'")
     c = con.query("SELECT count(*) co FROM Lab_Sample WHERE Sample_ID >='#{previous_sam}'").first['co'].to_i
-    total = total -  c
+    total = c
 end
 
 # creating observation for inserting order to openmrs
@@ -126,7 +127,7 @@ def create_encounter(con,patient_id,location_id,date_created,orderer)
     date_created = date_created
     voided = 0
     provider = 92
-    encounter_id = order_counter = con.query("SELECT MAX(encounter_id) AS total FROM encounter").as_json[0]['total'].to_i +  1
+    encounter_id = order_counter = con.query("SELECT encounter_id AS total FROM encounter ORDER BY encounter_id desc limit 1").as_json[0]['total'].to_i +  1
     uuid = get_uuid(con)
     encounter_type = con.query("SELECT encounter_type_id AS encout_type FROM encounter_type WHERE name ='LAB'").as_json[0]['encout_type']
     con.query("INSERT INTO encounter (encounter_id,encounter_type,patient_id,provider_id,location_id,encounter_datetime,creator,date_created,voided,uuid) 
@@ -149,7 +150,7 @@ end
 def create_observation(con,person_id,encounter_id,location_id,concept_id,datetime)
     uuid = get_uuid(con)
     obs_datetime = datetime
-    obs_id = obs_counter = con.query("SELECT MAX(obs_id) AS total FROM obs").as_json[0]['total'].to_i +  1
+    obs_id = obs_counter = con.query("SELECT obs_id AS total FROM obs ORDER BY encounter_id desc limit 1").as_json[0]['total'].to_i +  1
     con.query("INSERT INTO obs (obs_id,person_id,concept_id,encounter_id,obs_datetime,location_id,creator,date_created,voided,uuid)
         VALUES('#{obs_id}','#{person_id}','#{concept_id}','#{encounter_id}','#{obs_datetime}','#{location_id}','#{4}','#{obs_datetime}','#{0}','#{uuid}')
     ")
