@@ -336,7 +336,7 @@ samples.each_with_index do |row, i|
                     :phone_number => "",
                     :id => patient_id,
                     :email => "",
-                    :date_of_birth => "#{patient['birthdate'].to_date.strftime('%Y%m%d')}000000",
+                    :date_of_birth => (patient['birthdate'].to_date.strftime('%Y%m%d') rescue nil),
                     :gender => patient['gender'] 
             }      
             sample_typees[order_date] = {
