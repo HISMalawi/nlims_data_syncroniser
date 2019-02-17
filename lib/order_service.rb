@@ -84,8 +84,8 @@ module  OrderService
             var_checker = false
                   
             params[:tests].each do |tst|
-                  tst = tst.gsub("&amp;",'&')
-                  tstt = health_data_tests_types(tst)
+                  tst = tst.gsub("&amp;",'&')                 
+                  tstt = health_data_tests_types(tst)                 
                   status = check_test(tstt)
                   if status == false
                         details = {}
@@ -114,9 +114,11 @@ module  OrderService
                         if !params[:test_results].blank?
                           if !r = params[:test_results][tst].blank?
                             r = params[:test_results][tst]
-                            r = r['results']                     
+                            r = r['results']      
+                                         
                             measure_name = r.keys
-                            measure_name.each do |m|                            
+                            measure_name.each do |m|            
+                                          
                               v = r[m]
                               r_value = v[:result_value]
                               date = v[:date_result_entered]
@@ -183,7 +185,7 @@ module  OrderService
                                     r_value = v[:result_value]
                                     date = v[:date_result_entered]
                                     mm = check_health_data_measures(m)
-                                    puts m
+                                    
                                     m = Measure.where(name: mm).first
                                     m = m.id
                                     TestResult.create(
@@ -244,6 +246,8 @@ module  OrderService
         elsif  name  == "Full stool analysis"
           return "Stool Analysis"
         elsif  name  == "VDRL"
+          return "Viral Load"
+        elsif name == "HIV_viral_load"
           return "Viral Load"
         elsif  name  == "Cholest"
           return "Urine Chemistries"
@@ -359,7 +363,7 @@ module  OrderService
        return "Glucose"
       elsif m == "CD8_count"
         return "CD8 Count"
-      elsif m = "Albumin"
+      elsif m == "Albumin"
         return "Albumin(ALB)"
       else
         return m

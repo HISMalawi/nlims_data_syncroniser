@@ -7,8 +7,8 @@ module TrackingNumberService
       year = Time.now.strftime("%Y%m%d").to_s.slice(2..3)
       month = Time.now.strftime("%m")
       day = Time.now.strftime("%d")
-      puts 'in service'
-      puts file
+      #puts 'in service'
+      #puts file
       if file.blank?
         fi = {}
         fi[todate] = 1
