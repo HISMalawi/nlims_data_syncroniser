@@ -126,7 +126,7 @@ def create_encounter(con,patient_id,location_id,date_created,orderer)
     creator = orderer
     date_created = date_created
     voided = 0
-    provider = 92
+    provider = 30
     #encounter_id = order_counter = con.query("SELECT encounter_id AS total FROM encounter ORDER BY encounter_id desc limit 1").as_json[0]['total'].to_i +  1
     uuid = get_uuid(con)
     encounter_type = con.query("SELECT encounter_type_id AS encout_type FROM encounter_type WHERE name ='LAB'").as_json[0]['encout_type']
