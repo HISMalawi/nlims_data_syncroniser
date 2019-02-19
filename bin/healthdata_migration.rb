@@ -136,6 +136,155 @@ def create_encounter(con,patient_id,location_id,date_created,orderer)
     return encounter_id
 end
 
+def self.health_data_tests_types(name)
+    if name == 'Hep'
+      return "Hepatitis C Test"
+    elsif  name == "LFT"
+      return "Liver Function Tests"
+    elsif  name  == "Creat"
+      return "Creatinine Kinase"
+    elsif  name  == "Urinanal"
+      return "Urine Macroscopy"
+    elsif  name  == "MP"
+      return "Microprotein"
+    elsif  name  == "Full CSF analysis"
+      return "CSF Analysis"
+    elsif  name  == "Full CSF"
+      return "CSF Analysis"
+    elsif  name  == "Lactate"
+      return "Lipogram"
+    elsif  name  == "Crypto AG"
+      return "Cryptococcus Antigen Test"
+    elsif  name  == "U/E"
+      return "Uric Acid"
+    elsif  name  == "Full stool analysis"
+      return "Stool Analysis"
+    elsif  name  == "VDRL"
+      return "Viral Load"
+    elsif name == "HIV_viral_load"
+      return "Viral Load"
+    elsif  name  == "Cholest"
+      return "Urine Chemistries"
+    elsif  name  == "RBS"
+      return "FBC"
+    elsif  name  == "Tg"
+      return "TT"
+    elsif  name  == "Uri C/S"
+      return "Urine Microscopy"
+    elsif  name  == "AAFB (2nd)"
+      return "Uric Acid"
+    elsif  name  == "AAFB (1nd)"
+      return "Uric Acid"
+    elsif  name  == "AAFB (3nd)"
+      return "Uric Acid"
+    elsif  name  == "AAFB 4nd)"
+      return "Uric Acid"
+    elsif  name  == "AAFB (5nd)"
+      return "Uric Acid"
+    elsif  name  == "Blood NOS"
+      return "FBC"
+    elsif  name  == "G/XM"
+      return "Urine Microscopy"
+    else          
+      return name
+    end
+end
+
+
+def self.check_health_data_measures(m)
+    if m == "CD4_count"
+      return "CD4 Count"
+    elsif m == "Bilirubin_total"
+      return "Bilirubin Total(BIT))"
+    elsif m == "Bilirubin_total"
+      return "Bilirubin Total(BIT))"
+    elsif  m == "Gamma Glutamyl transpeptidase"
+      return "Lipase"
+    elsif m == "Alanine_Aminotransferase"
+      return "Lipase"
+    elsif m == "Aspartate_Transaminase"
+      return "Lipase"
+    elsif  m == "CD3_percent"
+      return "CD4 %"
+    elsif m == "HIV_RNA_PCR"
+     return "Viral Load"
+    elsif m == "CD4_percent"
+      return "CD4 %" 
+    elsif  m == "CD8_percent"
+      return "CD4 %" 
+    elsif  m == "CD8Tube"
+      return "CD4 %" 
+    elsif  m == "CD8Tube"
+      return "CD4 Count" 
+    elsif  m == "WBC_percent"
+     return "WBC"
+    elsif m == "RBC"
+     return "RBC"
+    elsif  m == "RDW"
+      return "RDW-CV" 
+    elsif  m == "Platelet_count"
+      return "Platelet Comments"
+    elsif  m == "Phosphorus"
+      return "Phosphorus (PHOS)"
+    elsif m == "Neutrophil_percent"
+      return "Neutrophils" 
+    elsif  m == "Neutrophil_count"
+      return "Neutrophils" 
+    elsif m == "Monocyte_count"
+      return "Monocytes"
+    elsif m == "Malaria_Parasite_count"
+      return "Malaria Species" 
+    elsif  m == "Lymphocyte_percent"
+      return "Lymphocytes"
+    elsif  m == "Lymphocyte_count"
+      return "Lymphocyte Count"
+    elsif m == "Lactate"
+      return "Lactatedehydrogenase(LDH)"
+    elsif  m == "HepBsAg"
+      return "Hepatitis B"
+    elsif  m == "Hemoglobin"
+      return "HB"
+    elsif m == "WBC_count"
+      return "WBC"
+    elsif m == "Glucose_CSF"
+      return "Glucose"  
+    elsif  m == "Glucose_blood"
+      return "Glucose"
+    elsif  m == "Eosinophil_percent"
+      return "Eosinophils" 
+    elsif m == "Eosinophil_count"
+      return "Eosinophils" 
+    elsif m == "Cryptococcal_Antigen"
+      return "CrAg" 
+    elsif  m == "Cholesterol"
+      return "Cholestero l(CHOL)"
+    elsif m == "Urea_Nitrogen_blood"
+      return "Glucose" 
+    elsif  m == "Basophil_percent"
+      return "Basophils"
+    elsif m == "Basophil_count"
+      return "Basophils"
+    elsif m == "Monocyte_percent"
+      return "Monocytes"
+    elsif m == "Hematocrit"
+      return "HB"
+    elsif  m == "Triglycerides"
+      return "Triglycerides(TG)" 
+    elsif m == "Toxoplasma_IgG"
+      return "50:50 Normal Plasma" 
+    elsif  m == "Protein_total"
+      return "Total Proteins" 
+    elsif  m == "Glucose_CSF"
+     return "Glucose"
+    elsif m == "CD8_count"
+      return "CD8 Count"
+    elsif m == "Albumin"
+      return "Albumin(ALB)"
+    else
+      return m
+    end
+  end
+
 def escape_characters(value)
     value = value.to_s.gsub(/'/,"")
     value = value.to_s.gsub(/,/," ")
@@ -186,13 +335,15 @@ samples.each_with_index do |row, i|
     orderer = ""
     patient = ""
     patient_id = ""
+    rrr = ""
     order_date = Time.new.strftime("%Y%m%d%H%M%S")
     
     if !row['AccessionNum'].blank?
        
         tests = con.query("SELECT * FROM LabTestTable WHERE AccessionNum = #{row['AccessionNum']}").as_json
         tests.each do |test_details|
-            tests_ordered.push(test_details['TestOrdered'])
+            rrr = health_data_tests_types(test_details['TestOrdered'])
+            tests_ordered.push(rrr)
             patient_id = test_details['Pat_ID']
             if test_counter == 0
                 order_date = (test_details['OrderDate'].blank? ? "" : "#{test_details['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{test_details['OrderTime'].to_time.strftime('%H%M%S')}")
@@ -230,14 +381,15 @@ samples.each_with_index do |row, i|
                                 :id => test_details['OrderedBy']
                                 }
                     } 
-                    test_statues[test_details['TestOrdered']] = status_details
+                    test_statues[rrr] = status_details
                     results = con.query("SELECT * FROM Lab_Parameter WHERE Sample_ID = #{row['Sample_ID']}").as_json
                     results.each do |rst|        
                         r = con.query("SELECT TestName AS test_name FROM codes_TestType WHERE TestType='#{rst['TESTTYPE']}'").as_json
                         if !r.blank?
                             rst['TestName'] = r[0]['test_name']
                         end
-                        rst['TestName'] = "Viral Load" if rst['TestName'] == "HIV_DNA_PCR"  || rst['TestName'] == "HIV_RNA_PCR"
+                        rst['TestName'] = "Viral Load" if rst['TestName'] == "HIV_DNA_PCR"  || rst['TestName'] == "HIV_RNA_PCR" || rst['TestName'] == "HIV_viral_load"
+                        rst['TestName'] =  check_health_data_measures(rst['TestName'])
                         formatted_results_value[rst['TestName']] = { 
                                     :result_value => "",
                                     :date_result_entered => ""
@@ -255,7 +407,7 @@ samples.each_with_index do |row, i|
                     end   
 
                     if formatted_results_value.blank?
-                        formatted_results[test_details['TestOrdered']] = {
+                        formatted_results[rrr] = {
                                 "results" => formatted_results_value,
                                 "result_entered_by" => {
                                     :first_name => "",
@@ -265,7 +417,7 @@ samples.each_with_index do |row, i|
                                     }
                         }
                     else
-                        formatted_results[test_details['TestOrdered']] = {
+                        formatted_results[rrr] = {
                                 "results" => formatted_results_value,
                                 "result_entered_by" => {
                                     :first_name => orderer['given_name'],
@@ -277,7 +429,7 @@ samples.each_with_index do |row, i|
                     end
 
                     if results_controller < results.length
-                        test_statues[test_details['TestOrdered']][time] = {
+                        test_statues[rrr][time] = {
                             "status" => "started",
                             "updated_by":  {
                                     :first_name => orderer['given_name'],
@@ -287,7 +439,7 @@ samples.each_with_index do |row, i|
                                     }
                         }
                     elsif  results_controller >= results.length
-                        test_statues[test_details['TestOrdered']][time] = {
+                        test_statues[rrr][time] = {
                             "status" => "verified",
                             "updated_by":  {
                                     :first_name => orderer['given_name'],
