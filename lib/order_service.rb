@@ -122,16 +122,20 @@ module  OrderService
                               v = r[m]
                               r_value = v[:result_value]
                               date = v[:date_result_entered]
-                              mm = check_health_data_measures(m)
-                              m = Measure.where(name: mm).first
-                              m = m.id
-                              TestResult.create(
-                                :test_id => t.id,
-                                :measure_id => m,
-                                :result => r_value,
-                                :time_entered => date,
-                                :device_name => ''
-                              )
+                              if !m.blank?
+				mm = check_health_data_measures(m)
+                              	puts m
+			      	puts "hello------------"
+			      	m = Measure.where(name: mm).first
+                              	m = m.id
+                              	TestResult.create(
+                                 :test_id => t.id,
+                                 :measure_id => m,
+                                 :result => r_value,
+                                 :time_entered => date,
+                                 :device_name => ''
+                               )
+			     end
                             end
                             var_checker = true
                           end
@@ -184,17 +188,20 @@ module  OrderService
                                     v = r[m]
                                     r_value = v[:result_value]
                                     date = v[:date_result_entered]
-                                    mm = check_health_data_measures(m)
-                                    
-                                    m = Measure.where(name: mm).first
-                                    m = m.id
-                                    TestResult.create(
-                                      :test_id => t.id,
-                                      :measure_id => m,
-                                      :result => r_value,
-                                      :time_entered => date,
-                                      :device_name => ''
-                                    )
+				    if !m.blank?
+					puts m
+					puts "hello"
+	                                    mm = check_health_data_measures(m)                                    
+        	                            m = Measure.where(name: mm).first
+                	                    m = m.id
+                        	        TestResult.create(
+                                	   :test_id => t.id,
+                                           :measure_id => m,
+                                     	   :result => r_value,
+                                           :time_entered => date,
+                                           :device_name => ''
+                                         )
+				   end
                                   end
                                   var_checker = true
                                 end
@@ -278,7 +285,7 @@ module  OrderService
 
     def self.check_health_data_measures(m)
       if m == "CD4_count"
-        return "CD4 Count"
+        return "CD4` Count"
       elsif m == "Bilirubin_total"
         return "Bilirubin Total(BIT))"
       elsif m == "Bilirubin_total"
@@ -365,7 +372,27 @@ module  OrderService
         return "CD8 Count"
       elsif m == "Albumin"
         return "Albumin(ALB)"
-      else
+     elsif m == "India_Ink"
+        return "India Ink"
+     elsif m == "Alkaline_Phosphatase"
+	return "Alkaline Phosphate(ALP)"
+     elsif m == "Bilirubin_direct"
+	return "Bilirubin Direct(BID)"
+     elsif m == "Glutamyl_Transferase"
+	return "GGT/r-GT" 
+     elsif m == "CD8_CD3_ratio"
+	return "CD8 Count"
+     elsif m == "CD4_CD3_ratio"
+	return "CD4 Count"
+     elsif m == "CD4_CD8_ratio"
+        return "CD8 Count"
+     elsif  m == "Carbon_Dioxide"
+	return "Other"
+     elsif m == "CD3_count"
+        return "CD3 Count"
+    elsif m == "RPR_Syphilis"
+	return "VDRL" 
+     else
         return m
       end
     end
