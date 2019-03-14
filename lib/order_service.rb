@@ -391,7 +391,9 @@ module  OrderService
      elsif m == "CD3_count"
         return "CD3 Count"
     elsif m == "RPR_Syphilis"
-	return "VDRL" 
+	return "VDRL"
+    elsif m  == "CD4 lube" 
+  return "CD4 Count" 
      else
         return m
       end
