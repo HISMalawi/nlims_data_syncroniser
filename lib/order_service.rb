@@ -393,7 +393,9 @@ module  OrderService
     elsif m == "RPR_Syphilis"
 	return "VDRL"
     elsif m  == "CD4 lube" 
-  return "CD4 Count" 
+        return "CD4 Count" 
+    elsif m == "ControlRunControlLotID"
+	return "Control"
      else
         return m
       end

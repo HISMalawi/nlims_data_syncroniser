@@ -126,7 +126,7 @@ def create_encounter(con,patient_id,location_id,date_created,orderer)
     creator = orderer
     date_created = date_created
     voided = 0
-    provider = 30
+    provider = 1
     #encounter_id = order_counter = con.query("SELECT encounter_id AS total FROM encounter ORDER BY encounter_id desc limit 1").as_json[0]['total'].to_i +  1
     uuid = get_uuid(con)
     encounter_type = con.query("SELECT encounter_type_id AS encout_type FROM encounter_type WHERE name ='LAB'").as_json[0]['encout_type']
@@ -389,7 +389,8 @@ samples.each_with_index do |row, i|
                             rst['TestName'] = r[0]['test_name']
                         end
                         rst['TestName'] = "Viral Load" if rst['TestName'] == "HIV_DNA_PCR"  || rst['TestName'] == "HIV_RNA_PCR" || rst['TestName'] == "HIV_viral_load"
-                        rst['TestName'] =  check_health_data_measures(rst['TestName'])
+                        #rst['TestName'] = "EID" if rst['TestName'] == "HIV_DNA_PCR"
+			rst['TestName'] =  check_health_data_measures(rst['TestName'])
                         formatted_results_value[rst['TestName']] = { 
                                     :result_value => "",
                                     :date_result_entered => ""
@@ -555,7 +556,7 @@ samples.each_with_index do |row, i|
                 order_location =  265
                 concept_id =  get_concept(bart2_con,sample_type)
                 encouter_id = create_encounter(bart2_con,patient_id,order_location,date_created,orderer_id)   
-                obs_id = create_observation(bart2_con,patient['npid2'],encouter_id,order_location,concept_id,date_created)
+                #obs_id = create_observation(bart2_con,patient['npid2'],encouter_id,order_location,concept_id,date_created)
     
                 order_counter = bart2_con.query("SELECT MAX(order_id) AS total FROM orders").as_json[0]['total'].to_i +  1
                 uuid = get_uuid(con)
