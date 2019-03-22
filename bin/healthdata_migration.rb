@@ -387,10 +387,9 @@ samples.each_with_index do |row, i|
                         r = con.query("SELECT TestName AS test_name FROM codes_TestType WHERE TestType='#{rst['TESTTYPE']}'").as_json
                         if !r.blank?
                             rst['TestName'] = r[0]['test_name']
-                        end
+                        end 
                         rst['TestName'] = "Viral Load" if rst['TestName'] == "HIV_DNA_PCR"  || rst['TestName'] == "HIV_RNA_PCR" || rst['TestName'] == "HIV_viral_load"
-                        #rst['TestName'] = "EID" if rst['TestName'] == "HIV_DNA_PCR"
-			rst['TestName'] =  check_health_data_measures(rst['TestName'])
+                        rst['TestName'] =  check_health_data_measures(rst['TestName'])
                         formatted_results_value[rst['TestName']] = { 
                                     :result_value => "",
                                     :date_result_entered => ""
@@ -561,8 +560,8 @@ samples.each_with_index do |row, i|
                 order_counter = bart2_con.query("SELECT MAX(order_id) AS total FROM orders").as_json[0]['total'].to_i +  1
                 uuid = get_uuid(con)
                 if results_checker == false
-                bart2_con.query("INSERT INTO orders (order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,patient_id,accession_number,uuid)
-                        VALUES('#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{patient_id}','#{accession_number}','#{uuid}')")
+                bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,patient_id,accession_number,uuid)
+                        VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{patient_id}','#{accession_number}','#{uuid}')")
                 else
                     voided = 0
                     date_voided = date_given
@@ -570,8 +569,8 @@ samples.each_with_index do |row, i|
                     void_reason = "result given"
                     #bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,date_voided,voided_by,void_reason,patient_id,accession_number,uuid)
                     #VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{date_voided}','#{voided_by}','#{void_reason}','#{patient_id}','#{accession_number}','#{uuid}')")
-                    bart2_con.query("INSERT INTO orders (order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,patient_id,accession_number,uuid)
-                        VALUES('#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{patient_id}','#{accession_number}','#{uuid}')")
+                    bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,patient_id,accession_number,uuid)
+                        VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{patient_id}','#{accession_number}','#{uuid}')")
                 end
                 OrderService.create_order_v2(data,t_num,c_id)
     
