@@ -20,9 +20,8 @@ require 'order_service'
       seq = File.read("#{Rails.root}/tmp/couch_seq_number")
       res = JSON.parse(RestClient.get("#{protocol}://#{username}:#{password}@#{ip}:#{port}/#{db_name}/_changes?include_docs=true&limit=3000&since=#{seq}"))
       docs = res['results']
-      seq  = res['last_seq']  
           
-      puts "hello--------------"
+      puts "hello------------ got Some docs!"
       puts docs
       puts docs.length
       docs.each do |document|
@@ -37,8 +36,7 @@ require 'order_service'
           OrderService.create_order(document,tracking_number,couch_id)         
       	end
         
-      File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
-        f.write(seq)
-      }
+        File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
+          f.write(document['seq'])
+        }
       end
-
