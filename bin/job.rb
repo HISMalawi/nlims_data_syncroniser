@@ -17,26 +17,27 @@ require 'order_service'
       ip = config['host']
       port = config['port']
       protocol = config['protocol']
-      seq = File.read("#{Rails.root}/tmp/couch_seq_number")
-      res = JSON.parse(RestClient.get("#{protocol}://#{username}:#{password}@#{ip}:#{port}/#{db_name}/_changes?include_docs=true&limit=3000&since=#{seq}"))
-      docs = res['results']
-          
-      puts "hello------------ got Some docs!"
-      puts docs
-      puts docs.length
-      docs.each do |document|
-        puts "-------------------------"
-        puts document
-        tracking_number = document['doc']['tracking_number']
-        couch_id =  document['doc']['_id']
+      begin
+        seq = File.read("#{Rails.root}/tmp/couch_seq_number")
+        res = JSON.parse(RestClient.get("#{protocol}://#{username}:#{password}@#{ip}:#{port}/#{db_name}/_changes?include_docs=true&limit=3000&since=#{seq}"))
+        docs = res['results']
+          puts "hello------------ got Some docs!"
+          puts docs
+          puts docs.length
+          docs.each do |document|
+            puts "-------------------------"
+            puts document
+            tracking_number = document['doc']['tracking_number']
+            couch_id =  document['doc']['_id']
 
-  	    if OrderService.check_order(tracking_number) == true         
-          OrderService.update_order(document,tracking_number)
-        else       
-          OrderService.create_order(document,tracking_number,couch_id)         
-      	end
+  	        if OrderService.check_order(tracking_number) == true         
+              OrderService.update_order(document,tracking_number)
+            else       
+              OrderService.create_order(document,tracking_number,couch_id)         
+      	    end
         
-        File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
-          f.write(document['seq'])
-        }
-      end
+            File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
+             f.write(document['seq'])
+            }
+          end
+      end until docs.empty?
