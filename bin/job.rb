@@ -13,7 +13,7 @@ require 'order_service'
       config = YAML.load_file("#{Rails.root}/config/couchdb.yml")[Rails.env]
       username = config['username']
       password = config['password']
-      db_name = config['prefix'].to_s +  "_" +  config['suffix'].to_s
+      db_name = config['prefix'].to_s +  "_order_" +  config['suffix'].to_s
       ip = config['host']
       port = config['port']
       protocol = config['protocol']
@@ -21,12 +21,12 @@ require 'order_service'
         seq = File.read("#{Rails.root}/tmp/couch_seq_number")
         res = JSON.parse(RestClient.get("#{protocol}://#{username}:#{password}@#{ip}:#{port}/#{db_name}/_changes?include_docs=true&limit=3000&since=#{seq}"))
         docs = res['results']
-          puts "hello------------ got Some docs!"
-          puts docs
-          puts docs.length
+          #puts "hello------------ got Some docs!"
+          #puts docs
+          #puts docs.length
           docs.each do |document|
-            puts "-------------------------"
-            puts document
+            #puts "-------------------------"
+            puts "processing #{document['id']} #{document['seq']} / #{res['last_seq']} "
             tracking_number = document['doc']['tracking_number']
             couch_id =  document['doc']['_id']
 

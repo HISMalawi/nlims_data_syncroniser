@@ -515,7 +515,8 @@ module  OrderService
              
               test_results = document['test_results'][tst_name]
               
-              if test_results['results'].keys.count > 0               
+              #if test_results['results'].keys.count > 0
+              if test_results.include?('results')              
                 test_results['results'].keys.each do |ms|                  
                   measur_id = OrderService.get_measure_id(ms)
                   rst = test_results['results'][ms]                              
