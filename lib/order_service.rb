@@ -727,30 +727,31 @@ module  OrderService
               end
              
               test_results = document['test_results'][tst_name]
-              
-              if test_results['results'].keys.count > 0               
-                test_results['results'].keys.each do |ms|                  
-                  measur_id = OrderService.get_measure_id(ms)
-                  rst = test_results['results'][ms]  
-                  res = TestResult.find_by_sql("SELECT count(*) AS t_count FROM test_results WHERE measure_id='#{measur_id}' AND test_id='#{tst_obj.id}'")[0]                           
-                  if res['t_count'] != 0
-                    TestResult.where(:measure_id => measur_id, :test_id => tst_obj.id).update_all(
-                            measure_id: measur_id,
-                            test_id: tst_obj.id,
-                            result: rst['result_value'],	
-                            device_name: '',						
-                            time_entered: rst['date_result_entered']	 # ms['date_result_given']
-                      )  
-                  else
-                    TestResult.create(
-                            measure_id: measur_id,
-                            test_id: tst_obj.id,
-                            result: rst['result_value'],	
-                            device_name: '',						
-                            time_entered: rst['date_result_entered'] # ms['date_result_given']
-                      )                     
+              unless test_results.blank?
+                if test_results['results'].keys.count > 0               
+                  test_results['results'].keys.each do |ms|                  
+                    measur_id = OrderService.get_measure_id(ms)
+                    rst = test_results['results'][ms]  
+                    res = TestResult.find_by_sql("SELECT count(*) AS t_count FROM test_results WHERE measure_id='#{measur_id}' AND test_id='#{tst_obj.id}'")[0]                           
+                    if res['t_count'] != 0
+                      TestResult.where(:measure_id => measur_id, :test_id => tst_obj.id).update_all(
+                              measure_id: measur_id,
+                              test_id: tst_obj.id,
+                              result: rst['result_value'],	
+                              device_name: '',						
+                              time_entered: rst['date_result_entered']	 # ms['date_result_given']
+                        )  
+                    else
+                      TestResult.create(
+                              measure_id: measur_id,
+                              test_id: tst_obj.id,
+                              result: rst['result_value'],	
+                              device_name: '',						
+                              time_entered: rst['date_result_entered'] # ms['date_result_given']
+                        )                     
+                    end
                   end
-                end    
+                end   
               end                
             end
     end
