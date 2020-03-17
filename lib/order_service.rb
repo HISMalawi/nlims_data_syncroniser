@@ -515,19 +515,20 @@ module  OrderService
              
               test_results = document['test_results'][tst_name]
               
-              #if test_results['results'].keys.count > 0
-              if test_results.include?('results')              
-                test_results['results'].keys.each do |ms|                  
-                  measur_id = OrderService.get_measure_id(ms)
-                  rst = test_results['results'][ms]                              
-                  TestResult.create(
-                          measure_id: measur_id,
-                          test_id: tst_obj.id,
-                          result: rst['result_value'],	
-                          device_name: '',						
-                          time_entered: '2018-09-21 04:38:02' # ms['date_result_given']
-                  )
-                end    
+              unless test_results.blank?
+                if test_results['results'].keys.count > 0
+                  test_results['results'].keys.each do |ms|                  
+                    measur_id = OrderService.get_measure_id(ms)
+                    rst = test_results['results'][ms]                              
+                    TestResult.create(
+                            measure_id: measur_id,
+                            test_id: tst_obj.id,
+                            result: rst['result_value'],	
+                            device_name: '',						
+                            time_entered: '2018-09-21 04:38:02' # ms['date_result_given']
+                    )
+                  end
+                end   
               end                
             end
        puts "---------done------------"
