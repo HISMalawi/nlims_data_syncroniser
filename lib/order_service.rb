@@ -684,6 +684,7 @@ module  OrderService
               )
               
               count = tst_value.keys.count
+              return if tst_obj.blank?
               t_count = TestStatusTrail.find_by_sql("SELECT count(*) AS t_count FROM test_status_trails WHERE test_id='#{tst_obj.id}'")[0]['t_count']
    
               if ((count - t_count) == 1) && count > t_count
