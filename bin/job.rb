@@ -2,10 +2,10 @@ require 'rest-client'
 require 'order_service'
 
 
-      if !File.exists?("/tmp/nlims_couch_seq_number")
-        FileUtils.touch "/tmp/nlims_couch_seq_number"
+      if !File.exists?("#{Rails.root}/log/nlims_couch_seq_number")
+        FileUtils.touch "#{Rails.root}/log/nlims_couch_seq_number"
         seq = "0"
-        File.open("/tmp/nlims_couch_seq_number",'w'){ |f|
+        File.open("#{Rails.root}/log/nlims_couch_seq_number",'w'){ |f|
           f.write(seq)
         }
       end
@@ -18,7 +18,7 @@ require 'order_service'
       port = config['port']
       protocol = config['protocol']
       begin
-        seq = File.read("/tmp/nlims_couch_seq_number")
+        seq = File.read("#{Rails.root}/log/nlims_couch_seq_number")
         res = JSON.parse(RestClient.get("#{protocol}://#{username}:#{password}@#{ip}:#{port}/#{db_name}/_changes?include_docs=true&limit=3000&since=#{seq}"))
         docs = res['results']
           #puts "hello------------ got Some docs!"
@@ -36,7 +36,7 @@ require 'order_service'
               OrderService.create_order(document,tracking_number,couch_id)         
       	    end
         
-            File.open("/tmp/nlims_couch_seq_number",'w'){ |f|
+            File.open("#{Rails.root}/log/nlims_couch_seq_number",'w'){ |f|
              f.write(document['seq'])
             }
           end
