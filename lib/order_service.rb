@@ -414,6 +414,8 @@ module  OrderService
     end
 
     def self.create_order(document,tracking_number,couch_id)
+
+            return if document['doc'].keys.count.to_i < 6
     
             document = document['doc']            
             patient_id = document['patient']['id']
