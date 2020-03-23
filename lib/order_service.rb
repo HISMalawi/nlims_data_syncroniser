@@ -602,6 +602,9 @@ module  OrderService
 
 
     def self.update_order(document,tracking_number)
+      
+            return if document['doc'].keys.count.to_i < 12
+
             puts "migrating v2--------------------------------"
             document = document['doc']            
             patient_id = document['patient']['id']
