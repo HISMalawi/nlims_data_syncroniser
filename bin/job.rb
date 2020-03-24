@@ -24,7 +24,7 @@ require 'order_service'
           #puts "hello------------ got Some docs!"
           #puts docs
           #puts docs.length
-          Parallel.each(docs) do |document|
+          docs.each do |document|
             #puts "-------------------------"
             puts "processing #{document['id']} #{document['seq']} / #{res['last_seq']} "
             tracking_number = document['doc']['tracking_number']
@@ -34,9 +34,10 @@ require 'order_service'
               OrderService.update_order(document,tracking_number)
             else       
               OrderService.create_order(document,tracking_number,couch_id)         
-      	    end            
+      	    end
+            File.open("#{Rails.root}/log/nlims_couch_seq_number",'w'){ |f|
+             f.write(document['seq'])
+            }           
           end
-          File.open("#{Rails.root}/log/nlims_couch_seq_number",'w'){ |f|
-             f.write(res['last_seq'])
-            }
+          
       end until docs.empty?
