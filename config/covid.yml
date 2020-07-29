@@ -1,0 +1,17 @@
+source:
+  host: 'localhost'
+  port: '3232'
+  database: 'database'
+  username: 'username'
+  password: 'password'
+  testing_lab: 'QECH'
+
+target: 
+  host:                           'localhost'
+  port:                           '3939'
+  prefix:                         '/api/v1/'
+  protocol:                       ''
+  app_name:                       ''
+  token:                          ''
+  username:                       ''
+  password:                       ''
