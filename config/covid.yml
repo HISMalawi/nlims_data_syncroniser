@@ -1,9 +1,17 @@
 source:
-  host: 127.0.0.1
-  port: 3232
-  database: eid_vl
-  username: root
-  password: password
+  host: 'localhost'
+  port: '3232'
+  database: 'eid_vl'
+  username: 'root'
+  password: 'password'
+  testing_lab: 'Queen Elizabeth Central Hospital'
 
-destination: 
-  url:  http://localhost:3014/create_hl7_order
+target: 
+  host:                           '192.168.43.50'
+  port:                           '3009'
+  prefix:                         '/api/v1/'
+  protocol:                       'http'
+  app_name:                       'migrator'
+  token:                          'XEFH6384'
+  username:                       'dev'
+  password:                       'dev'

@@ -3,675 +3,317 @@ require 'json'
 require 'rubygems'
 require 'net/http'
 require 'uri'
-
-load "lib/order_service.rb"
-load "bin/tracking_number_service.rb"
-$settings = YAML.load_file("#{Rails.root}/config/application.yml")
-$configs = YAML.load_file("#{Rails.root}/config/couchdb.yml")[Rails.env]
-$covidconfigs = YAML.load_file("#{Rails.root}/config/covid.yml")[Rails.env]
-
-puts "Enter MYSQL HOST e.g 0.0.0.0"
-host = gets.chomp
-
-puts "Enter MYSQL User e,g root"
-user = gets.chomp
-
-puts "Enter MYSQL password"
-password = STDIN.noecho(&:gets).chomp
-
-puts "Enter healthdata database name"
-healthdata_db = gets.chomp
-
-puts "Enter ART database name"
-art_db = gets.chomp
-
-puts "new migration or continuation? (n/c)"
-opt = gets.chomp
-
-$lims_db = "#{$configs['prefix']}_order_#{$configs['suffix']}"
-puts "Data to be migrated to NLIMS database #{$lims_db}"
+require 'yaml'
+require 'rest_client'
 
 
-###############################
+def load_defaults()
+  covid_conf = YAML.load_file("#{Rails.root}/config/covid.yml")
 
+  @source_host = covid_conf['source']['host']
+  @source_username = covid_conf['source']['user']
+  @source_password = covid_conf['source']['password']
+  @source_database = covid_conf['source']['database']
+  @source_target_lab = covid_conf['source']['testing_lab']
 
-nationalRepoNode = "#{$covidconfigs['destination']}"
+  @target_host = covid_conf['target']['host']
+  @target_prefix = covid_conf['target']['prefix']
+  @target_port = covid_conf['target']['port']
+  @target_protocol = covid_conf['target']['protocol']
+  @token = covid_conf['target']['token']
+  @user = covid_conf['target']['username']
+  @pass = covid_conf['target']['password']
 
-data = {
-  "return_path" => 123,
-  "district" => 123,
-  "health_facility_name" => 123,
-  "first_name" => 123,
-  "last_name" => 123,
-  "middle_name" => 123,
-  "date_of_birth" => 123,
-  "gender" => 123,
-  "national_patient_id" => 123,
-  "reason_for_test" => 123,
-  "sample_collector_last_name" => 123,
-  "sample_collector_first_name" => 123,
-  "sample_collector_phone_number" => 123,
-  "sample_collector_id" => 123,
-  "sample_order_location" => 123,
-  "sample_type" => 123,
-  "date_sample_drawn" => 123,
-  "date_sample_drawn" => 123,
-  "tests" => 123,
-  "sample_priority" => 123,
-  "target_lab" => 123,
-  "tracking_number" => 123,
-  "art_start_date" => 123,
-  "date_dispatched" => 123,
-  "date_received" => 123
-}
+  @logger = Logger.new("migration_log_#{Time.parse(DateTime.now.to_s)}.txt")
 
-dataJSON = JSON.generate(data)
-
-uri = URI.parse(nationalRepoNode)
-http = Net::HTTP.new(uri.host, uri.port)
-request = Net::HTTP::Post.new(uri.request_uri)
-request.set_form_data(dataJSON)
-request.add_field("Accept", "application/json")
-
-response = http.request(request)
-#puts response.inspect
-
-
-
-
-
-
-
-
-
-
-
-
-################################
-
-
-
-#$couch_query_url = "#{$configs['protocol']}://#{$configs['username']}:#{$configs['password']}@#{$configs['host']}:#{$configs['port']}/#{$lims_db}/_design/Order/_view/generic"
-puts "ART Database: #{art_db} , HealthData database: #{healthdata_db},  SQL Username: #{user}, LIMS database: #{$lims_db}"
-
-puts "Continue migration using details above? (y/n)"
-proceed = gets.chomp
-
-if proceed.downcase.strip != 'y'
-  puts "Migration Stopped"
-  Process.kill 9, Process.pid
 end
 
-puts "Initialising NLIMS database" 
-url = "#{$configs['protocol']}://#{$configs['username']}:#{$configs['password']}@#{$configs['host']}:#{$configs['port']}/#{$lims_db}"
-begin
-    ress = JSON.parse(RestClient.get(url,:content_type => "application/json"))
-    puts "NLIMS database initialised" 
-rescue
-    ress = JSON.parse(RestClient.put(url,:content_type => "application/json"))
-    puts "NLIMS database initialised" 
-end
-if !File.exists?("#{Rails.root}/public/orders_with_no_patients.json")
-    data = {}
-    FileUtils.touch("#{Rails.root}/public/orders_with_no_patients.json")   
-    data['Samples'] = []
-    File.open("#{Rails.root}/public/orders_with_no_patients.json","w"){ |w|
-        w.write(data.to_json)
+def validate_token(m_token)
+  headers = {
+    content_type: "application/json",
+    token: m_token
+  }
+
+  token_data = {"token" => m_token}
+  data = JSON.generate(token_data)
+
+  url = "#{@target_protocol}://#{@target_host}:#{@target_port}#{@target_prefix}check_token_validity"
+
+  result = JSON.parse(RestClient.get(url,headers))
+
+  if (result["error"] == false)
+    @token = m_token
+    return @token
+  else
+    headers = {
+    content_type: "text/plain",
+    token: m_token
     }
-else
-    data = {}
-    data['Samples'] = []
-    File.open("#{Rails.root}/public/orders_with_no_patients.json","w"){ |w|
-        w.write(data.to_json)
-    }
-end
+    url = "#{@target_protocol}://#{@target_host}:#{@target_port}#{@target_prefix}re_authenticate/#{@user}/#{@pass}"
+    res = JSON.parse(RestClient.get(url,headers))
 
-if !File.exists?("#{Rails.root}/public/sample_tracker")
-    FileUtils.touch("#{Rails.root}/public/sample_tracker")   
-end
-
-if !File.exists?("#{Rails.root}/public/orders_with_no_tests.json")
-    data = {}
-    FileUtils.touch("#{Rails.root}/public/orders_with_no_tests.json")   
-    data['Samples'] = []
-    File.open("#{Rails.root}/public/orders_with_no_tests.json","w"){ |w|
-        w.write(data.to_json)
-    }
-else
-    data = {}
-    data['Samples'] = []
-    File.open("#{Rails.root}/public/orders_with_no_tests.json","w"){ |w|
-        w.write(data.to_json)
-    }
-end
-
-con = Mysql2::Client.new(:host => host,
-                         :username => user,
-                         :password => password,
-                         :database => healthdata_db)
-
-bart2_con = Mysql2::Client.new(:host => host,
-                               :username => user,
-                               :password => password,
-                               :database => art_db)
-
-   
-
-if opt.downcase.strip == "n"
-    samples = con.query("SELECT * FROM Lab_Sample") # retrieving the orders
-    total = con.query("SELECT COUNT(*) total FROM Lab_Sample").first["total"].to_i # counting orders to be migrated
-else
-    previous_sam = File.read("#{Rails.root}/public/sample_tracker") 
-    samples = con.query("SELECT * FROM Lab_Sample WHERE Sample_ID >='#{previous_sam}'")
-    c = con.query("SELECT count(*) co FROM Lab_Sample WHERE Sample_ID >='#{previous_sam}'").first['co'].to_i
-    total = c
-end
-
-# creating observation for inserting order to openmrs
-def get_concept(con,type)
-    if type == "Blood"
-        concept_id = con.query("SELECT concept.concept_id AS concept_id FROM concept_name 
-                        INNER JOIN concept ON concept.concept_id = concept_name.concept_id
-                        WHERE concept_name.name='Laboratory tests ordered'").as_json[0]['concept_id']
+    if (res["error"] == false)
+      @logger.info("Re-Authenticated the token")
+      @token = res["data"]["token"]
+      return @token
     else
-        concept_id = con.query("SELECT concept.concept_id AS concept_id FROM concept_name 
-                        INNER JOIN concept ON concept.concept_id = concept_name.concept_id
-                        WHERE concept_name.name='Laboratory tests ordered'").as_json[0]['concept_id']
-    end  
-  return concept_id
-end
-
-def get_uuid(con)
-  uuid = con.query("SELECT uuid()").as_json[0]['uuid()']
-  return uuid
-end
-
-# creating observation for inserting order to openmrs
-def create_encounter(con,patient_id,location_id,date_created,orderer)    
-    encounter_date = date_created 
-    creator = orderer
-    date_created = date_created
-    voided = 0
-    provider = 1
-    #encounter_id = order_counter = con.query("SELECT encounter_id AS total FROM encounter ORDER BY encounter_id desc limit 1").as_json[0]['total'].to_i +  1
-    uuid = get_uuid(con)
-    encounter_type = con.query("SELECT encounter_type_id AS encout_type FROM encounter_type WHERE name ='LAB'").as_json[0]['encout_type']
-    con.query("INSERT INTO encounter (encounter_type,patient_id,provider_id,location_id,encounter_datetime,creator,date_created,voided,uuid) 
-                VALUES('#{encounter_type}','#{patient_id}','#{provider}','#{location_id}','#{encounter_date}','#{creator}','#{date_created}','#{voided}','#{uuid}')")
-    encounter_id  = con.query("SELECT encounter_id AS total FROM encounter ORDER BY encounter_id desc limit 1").as_json[0]['total'].to_i
-    return encounter_id
-end
-
-def self.health_data_tests_types(name)
-    if name == 'Hep'
-      return "Hepatitis C Test"
-    elsif  name == "LFT"
-      return "Liver Function Tests"
-    elsif  name  == "Creat"
-      return "Creatinine Kinase"
-    elsif  name  == "Urinanal"
-      return "Urine Macroscopy"
-    elsif  name  == "MP"
-      return "Microprotein"
-    elsif  name  == "Full CSF analysis"
-      return "CSF Analysis"
-    elsif  name  == "Full CSF"
-      return "CSF Analysis"
-    elsif  name  == "Lactate"
-      return "Lipogram"
-    elsif  name  == "Crypto AG"
-      return "Cryptococcus Antigen Test"
-    elsif  name  == "U/E"
-      return "Uric Acid"
-    elsif  name  == "Full stool analysis"
-      return "Stool Analysis"
-    elsif  name  == "VDRL"
-      return "Viral Load"
-    elsif name == "HIV_viral_load"
-      return "Viral Load"
-    elsif  name  == "Cholest"
-      return "Urine Chemistries"
-    elsif  name  == "RBS"
-      return "FBC"
-    elsif  name  == "Tg"
-      return "TT"
-    elsif  name  == "Uri C/S"
-      return "Urine Microscopy"
-    elsif  name  == "AAFB (2nd)"
-      return "Uric Acid"
-    elsif  name  == "AAFB (1nd)"
-      return "Uric Acid"
-    elsif  name  == "AAFB (3nd)"
-      return "Uric Acid"
-    elsif  name  == "AAFB 4nd)"
-      return "Uric Acid"
-    elsif  name  == "AAFB (5nd)"
-      return "Uric Acid"
-    elsif  name  == "Blood NOS"
-      return "FBC"
-    elsif  name  == "G/XM"
-      return "Urine Microscopy"
-    else          
-      return name
-    end
-end
-
-
-def self.check_health_data_measures(m)
-    if m == "CD4_count"
-      return "CD4 Count"
-    elsif m == "Bilirubin_total"
-      return "Bilirubin Total(BIT))"
-    elsif m == "Bilirubin_total"
-      return "Bilirubin Total(BIT))"
-    elsif  m == "Gamma Glutamyl transpeptidase"
-      return "Lipase"
-    elsif m == "Alanine_Aminotransferase"
-      return "Lipase"
-    elsif m == "Aspartate_Transaminase"
-      return "Lipase"
-    elsif  m == "CD3_percent"
-      return "CD4 %"
-    elsif m == "HIV_RNA_PCR"
-     return "Viral Load"
-    elsif m == "CD4_percent"
-      return "CD4 %" 
-    elsif  m == "CD8_percent"
-      return "CD4 %" 
-    elsif  m == "CD8Tube"
-      return "CD4 %" 
-    elsif  m == "CD8Tube"
-      return "CD4 Count" 
-    elsif  m == "WBC_percent"
-     return "WBC"
-    elsif m == "RBC"
-     return "RBC"
-    elsif  m == "RDW"
-      return "RDW-CV" 
-    elsif  m == "Platelet_count"
-      return "Platelet Comments"
-    elsif  m == "Phosphorus"
-      return "Phosphorus (PHOS)"
-    elsif m == "Neutrophil_percent"
-      return "Neutrophils" 
-    elsif  m == "Neutrophil_count"
-      return "Neutrophils" 
-    elsif m == "Monocyte_count"
-      return "Monocytes"
-    elsif m == "Malaria_Parasite_count"
-      return "Malaria Species" 
-    elsif  m == "Lymphocyte_percent"
-      return "Lymphocytes"
-    elsif  m == "Lymphocyte_count"
-      return "Lymphocyte Count"
-    elsif m == "Lactate"
-      return "Lactatedehydrogenase(LDH)"
-    elsif  m == "HepBsAg"
-      return "Hepatitis B"
-    elsif  m == "Hemoglobin"
-      return "HB"
-    elsif m == "WBC_count"
-      return "WBC"
-    elsif m == "Glucose_CSF"
-      return "Glucose"  
-    elsif  m == "Glucose_blood"
-      return "Glucose"
-    elsif  m == "Eosinophil_percent"
-      return "Eosinophils" 
-    elsif m == "Eosinophil_count"
-      return "Eosinophils" 
-    elsif m == "Cryptococcal_Antigen"
-      return "CrAg" 
-    elsif  m == "Cholesterol"
-      return "Cholestero l(CHOL)"
-    elsif m == "Urea_Nitrogen_blood"
-      return "Glucose" 
-    elsif  m == "Basophil_percent"
-      return "Basophils"
-    elsif m == "Basophil_count"
-      return "Basophils"
-    elsif m == "Monocyte_percent"
-      return "Monocytes"
-    elsif m == "Hematocrit"
-      return "HB"
-    elsif  m == "Triglycerides"
-      return "Triglycerides(TG)" 
-    elsif m == "Toxoplasma_IgG"
-      return "50:50 Normal Plasma" 
-    elsif  m == "Protein_total"
-      return "Total Proteins" 
-    elsif  m == "Glucose_CSF"
-     return "Glucose"
-    elsif m == "CD8_count"
-      return "CD8 Count"
-    elsif m == "Albumin"
-      return "Albumin(ALB)"
-    else
-      return m
+      @logger.info("Re-Authenticated the token. message: #{res["message"]}")
+      exit
     end
   end
 
-def escape_characters(value)
-    value = value.to_s.gsub(/'/,"")
-    value = value.to_s.gsub(/,/," ")
-    value = value.to_s.gsub(/;/," ")
-    value = value.to_s.gsub(")"," ")
-    value = value.to_s.gsub("("," ")
-    value = value.to_s.gsub("/"," ")
-    value = value.to_s.gsub('\\'," ")
-  return value
 end
 
-# creating observation for inserting order to openmrs6fba15f8e769
-def create_observation(con,person_id,encounter_id,location_id,concept_id,datetime)
-    uuid = get_uuid(con)
-    obs_datetime = datetime
-    #obs_id = obs_counter = con.query("SELECT obs_id AS total FROM obs ORDER BY encounter_id desc limit 1").as_json[0]['total'].to_i +  1
-    con.query("INSERT INTO obs (person_id,concept_id,encounter_id,obs_datetime,location_id,creator,date_created,voided,uuid)
-        VALUES('#{person_id}','#{concept_id}','#{encounter_id}','#{obs_datetime}','#{location_id}','#{4}','#{obs_datetime}','#{0}','#{uuid}')
-    ")
-    obs_id = con.query("SELECT obs_id AS total FROM obs ORDER BY encounter_id desc limit 1").as_json[0]['total'].to_i +  1
-    return obs_id
+def send_json(json_obj, target_function)
+
+  headers = {
+      content_type: "application/json",
+      token: validate_token(@token)
+  }
+ 
+  if (target_function == 'create_order')
+    url = "#{@target_protocol}://#{@target_host}:#{@target_port}#{@target_prefix}create_order" 
+    
+    res = JSON.parse(RestClient.post(url,json_obj,headers))
+    return res
+  elsif (target_function == 'update_result')
+    url = "#{@target_protocol}://#{@target_host}:#{@target_port}#{@target_prefix}update_test" 
+    res = JSON.parse(RestClient.post(url,json_obj,headers))
+    return res
+
+  elsif (target_function == 'update_status')
+    url = "#{@target_protocol}://#{@target_host}:#{@target_port}#{@target_prefix}update_test"  
+    res = JSON.parse(RestClient.post(url,json_obj,headers))
+    return res
+  else
+    return ''
+  end
+
 end
 
-no_result_dates = []
-orders_with_no_patients = []
-tests_without_results = []
-orders_without_orderer = []
-orders_without_tests = []
-order = {}
-migrated_orders = 0
-results_checker = false
-date_given = ''
+def log_results()
+  # logging results to file
+end
 
-samples.each_with_index do |row, i|
+
+load_defaults
+
+#connect to the database using Mysql2 adapter
+source_conn = Mysql2::Client.new(:host => @source_host,
+                                 :username => @source_username,
+                                 :password => @source_password,
+                                 :database => @source_database)
+
+
+covid_data = source_conn.query("SELECT 
+                                  cp.patientResidenceDistrict AS district,
+                                  cp.facilitycode AS health_facility_name, 
+                                  cp.firstname AS first_name,
+                                  cp.surname AS last_name,
+                                  cp.riskFactor1 AS reason_for_test,
+                                  cp.dob AS date_of_birth,
+                                  cp.gender AS gender, 
+                                  cp.patientID AS national_patient_id, 
+                                  cp.nameOfPersonCompletingForm AS who_order_test_last_name, 
+                                  cp.nameOfPersonCompletingForm AS who_order_test_first_name,  
+                                  cp.labcode AS target_lab,
+                                  cs.datecollected AS date_sample_drawn,
+                                  cs.LabID AS lab_id,
+                                  ss.state AS test_status,
+                                  cs.datespecimenreceivedatlab AS date_received, 
+                                  cs.datespecimentsenttolab AS date_dispatched,
+                                  cs.result_interpretation as test_result,
+                                  cs.dateresultupdated as test_result_date,
+                                  cs.trackingno as tracking_number
+                                FROM case_samples cs
+                                  INNER JOIN case_patient cp
+                                    ON cs.patientAutoID = cp.autoID
+                                  INNER JOIN test_case tc
+                                    ON tc.id = cp.testCase
+                                  INNER JOIN samplestatus ss
+                                    ON cs.status = ss.ID
+                                LIMIT 2")
+#raise covid_data.first.to_yaml
+covid_data.each do |data_e|
+
+  @logger.info("working on this record  #{data_e["lab_id"].to_s}, #{data_e["tracking_number"].to_s}, #{data_e["test_result"].to_s} ")
+  puts "working on this record " + data_e["lab_id"].to_s #for checking purposes
+
+  if (data_e["tracking_no"].blank?) #check if the record has a tracking number
+    data = {
+      "district" => data_e["district"],
+      "health_facility_name" => data_e["health_facility_name"],
+      "first_name" => data_e["first_name"],
+      "last_name" => data_e["last_name"],
+      "middle_name" => "", #data_e["middle_name"],
+      "date_of_birth" => data_e["date_of_birth"],
+      "gender" => data_e["gender"],
+      "national_patient_id" => data_e["national_patient_id"],
+      "phone_number" => "",
+      "reason_for_test" => data_e["reason_for_test"],
+      "who_order_test_last_name" => data_e["who_order_test_last_name"],
+      "who_order_test_first_name" => data_e["who_order_test_first_name"],
+      "who_order_test_phone_number" => "", #data_e["who_order_test_phone_number"],
+      "who_order_test_id" => data_e["who_order_test_id"],
+      "order_location" => data_e["health_facility_name"], #data_e["order_location"],
+      "sample_type" => "Swab", #to check the type of sample that they are using for gene xpert
+      "date_sample_drawn" => data_e["date_sample_drawn"],
+      "tests" => ["Covid19"],
+      "sample_status" => data_e["test_status"], #Check how this is done in NLIMS
+      "sample_priority" => 'Routine',
+      "target_lab" => @source_target_lab,
+      "date_received" => data_e["date_received"],
+      "date_dispatched" => data_e["date_dispatched"],
+      "requesting_clinician" => "Migration Script"
+      }
+    dataJSON = JSON.generate(data)
+    puts "sending orderdata to send_json"
+    result = send_json(dataJSON, "create_order")
+    @logger.info("#{result.to_yaml}")
     
-    puts "#{(i + 1)}/#{total}" # progress update       
-    test_counter = 0 
-    formatted_results_value = {}
-    results_controller = 0
-    tests_ordered = []
-    status_details = {}
-    test_status = {}
-    formatted_results = {}
-    test_statues = {}
-    sample_type = ""
-    sample_typees = {}
-    time = ""
-    orderer = ""
-    patient = ""
-    patient_id = ""
-    rrr = ""
-    order_date = Time.new.strftime("%Y%m%d%H%M%S")
-    
-    if !row['AccessionNum'].blank?
-       
-        tests = con.query("SELECT * FROM LabTestTable WHERE AccessionNum = #{row['AccessionNum']}").as_json
-        tests.each do |test_details|
-            rrr = health_data_tests_types(test_details['TestOrdered'])
-            tests_ordered.push(rrr)
-            patient_id = test_details['Pat_ID']
-            if test_counter == 0
-                order_date = (test_details['OrderDate'].blank? ? "" : "#{test_details['OrderDate'].to_date.strftime('%Y%m%d')}" + "#{test_details['OrderTime'].to_time.strftime('%H%M%S')}")
-                patient = bart2_con.query("SELECT n.given_name, n.middle_name, n.family_name, p.birthdate, p.gender, pid2.identifier npid, pid2.patient_id npid2
-                                            FROM patient_identifier pid
-                                            INNER JOIN person_name n ON n.person_id = pid.patient_id
-                                            INNER JOIN person p ON p.person_id = pid.patient_id
-                                            INNER JOIN patient_identifier pid2 ON pid2.patient_id = pid.patient_id AND pid2.voided = 0
-					    WHERE pid.identifier = '#{patient_id}' AND (pid2.voided = 0 AND pid.identifier_type = 3)").as_json[0]
+    if (result["error"] == false)
+      
+      @logger.info("Just added a new order for  #{data_e["lab_id"].to_s}, with #{ result['message']} #{result['data']}")
+      puts "added new order #{ result['message']} #{result['data']}"
 
-                id__ = test_details['OrderedBy']
-                orderer = bart2_con.query("SELECT n.given_name, n.middle_name, n.family_name FROM users u
-                                            INNER JOIN person_name n ON n.person_id = u.person_id
-                                            WHERE u.user_id = '#{id__}' AND n.voided = 0 
-                                            ORDER BY u.date_created DESC").as_json[0] rescue {}
-                
-                if orderer.blank?
-                    orders_without_orderer.push(row['Sample_ID'].to_s);
-                    orderer = {}
-                    orderer['given_name'] = ""
-                    orderer['family_name'] = ""
-                    orderer['id'] = 1
-                else
-                    orderer['id'] = id__               
-                end               
-            end
-         
-            if !patient.blank?
-                    status_details[order_date] = {
-                        "status" => "Drawn",
-                        "updated_by":  {
-                                :first_name => orderer['given_name'],
-                                :last_name => orderer['family_name'],
-                                :phone_number =>  "",
-                                :id => test_details['OrderedBy']
-                                }
-                    } 
-                    test_statues[rrr] = status_details
-                    results = con.query("SELECT * FROM Lab_Parameter WHERE Sample_ID = #{row['Sample_ID']}").as_json
-                    results.each do |rst|        
-                        r = con.query("SELECT TestName AS test_name FROM codes_TestType WHERE TestType='#{rst['TESTTYPE']}'").as_json
-                        if !r.blank?
-                            rst['TestName'] = r[0]['test_name']
-                        end 
-                        rst['TestName'] = "Viral Load" if rst['TestName'] == "HIV_DNA_PCR"  || rst['TestName'] == "HIV_RNA_PCR" || rst['TestName'] == "HIV_viral_load"
-                        rst['TestName'] =  check_health_data_measures(rst['TestName'])
-                        formatted_results_value[rst['TestName']] = { 
-                                    :result_value => "",
-                                    :date_result_entered => ""
-                        }                         
-                    
-                        test_status[rst['TestName']] = status_details
-                            time = rst['TimeStamp'].to_datetime.strftime("%Y%m%d%H%M%S") if !rst['TimeStamp'].blank?
-                            time = Time.new.strftime("%Y%m%d%H%M%S") if rst['TimeStamp'].blank?
-                            time =  order_date if time < order_date            
-                            formatted_results_value[rst['TestName']] = {                
-                                :result_value => "#{rst['Range'].to_s.strip} #{rst['TESTVALUE'].to_s.strip}" ,
-                                :date_result_entered => time
-                            }  
-                        results_controller = results_controller + 1                         
-                    end   
+      tracking_number = result["data"]["tracking_number"]
+      #test_result = data_e["test_result"]
+      lab_id = data_e["lab_id"]
 
-                    if formatted_results_value.blank?
-                        formatted_results[rrr] = {
-                                "results" => formatted_results_value,
-                                "result_entered_by" => {
-                                    :first_name => "",
-                                    :last_name => "",
-                                    :phone_number =>  "",
-                                    :id => ""
-                                    }
-                        }
-                    else
-                        formatted_results[rrr] = {
-                                "results" => formatted_results_value,
-                                "result_entered_by" => {
-                                    :first_name => orderer['given_name'],
-                                    :last_name => orderer['family_name'],
-                                    :phone_number =>  "",
-                                    :id => test_details['OrderedBy']
-                                    }
-                        }
-                    end
+      #update tracking number
+      source_conn.query("UPDATE case_samples
+                        SET trackingno = '#{tracking_number}'
+                        WHERE LabID = '#{lab_id}'")
+                       
+      
+      @logger.info("Just updated the tracking number for  #{data_e["lab_id"].to_s} with this value #{tracking_number}")
+      puts "Just updated the tracking number for " + data_e["lab_id"].to_s
 
-                    if results_controller < results.length
-                        test_statues[rrr][time] = {
-                            "status" => "started",
-                            "updated_by":  {
-                                    :first_name => orderer['given_name'],
-                                    :last_name => orderer['family_name'],
-                                    :phone_number =>  "",
-                                    :id =>test_details['OrderedBy']
-                                    }
-                        }
-                    elsif  results_controller >= results.length
-                        test_statues[rrr][time] = {
-                            "status" => "verified",
-                            "updated_by":  {
-                                    :first_name => orderer['given_name'],
-                                    :last_name => orderer['family_name'],
-                                    :phone_number =>  "",
-                                    :id => test_details['OrderedBy']
-                                    }
-                        }
-                        results_checker = true
-                        time = Time.new.strftime("%Y%m%d%H%M%S") if time.blank?
-                        date_given = time 
-                    end
+      if (!data_e["test_result"].blank?)
+        @logger.info("This #{data_e["lab_id"].to_s} has a test result ")
+        result_data = {
+          "tracking_number" => tracking_number,
+          "test_status" => 'verified',
+          "test_name" => "Covid19",
+          "result_date" => data_e["result_date"],
+          "who_updated" => {
+                              'id':'31',
+                              'phone_number':'',
+                              'first_name':'Bernard',
+                              'last_name':'Kanfosi'
+                           },
+          "results" => {
+                        "Covid19":"#{data_e["test_result"]}"   
+                       }  
+        }
 
-                    if row['TestOrdered'] == "HIV_viral_load"
-                        sample_type = "DBS (Free drop to DBS card)"
-                    else
-                        sample_type = "Blood"
-                    end
-                    
-                    formatted_results_value = {}
-                    test_counter = test_counter + 1
-            else
-                orders_with_no_patients.push(patient_id)
-                count = JSON.parse(File.read("#{Rails.root}/public/orders_with_no_patients.json"))
-                count['Samples'] = count['Samples'].push(row["Sample_ID"])
+        dataJSON = JSON.generate(result_data)
+        @logger.info("sending reult data to send_json -- Update Result    #{data_e["lab_id"].to_s}" )
+        result_update = send_json(dataJSON, "update_result")
+        @logger.info("#{result_update.to_yaml}")
 
-                File.open("#{Rails.root}/public/orders_with_no_patients.json", 'w') {|f|
-                f.write(count.to_json)}
-                # no patient
-            end
+        if (result_update["error"] == false)
+          @logger.info("Just updated the result in NLIMS for #{data_e["lab_id"].to_s}")
+            puts "Just updated the result for " + data_e["lab_id"].to_s
+        else
+          @logger.info("Failed to update the result in NLIMS for #{data_e["lab_id"].to_s}")
+            puts "Failed to update the result for " + data_e["lab_id"].to_s
         end
-        if !patient.blank?
-            t_num =  TrackingNumberService.generate_tracking_number()
-            TrackingNumberService.prepare_next_tracking_number
-            puts t_num   
-            who_order = {}
-            who_order = {
-                "first_name"=> orderer['given_name'],
-                "last_name"=> orderer['family_name'],
-                "id_number"=> orderer['id'],
-                "phone_number"=> ""
-            }    
-            patient_ = {
-                    :first_name =>  patient['given_name'],
-                    :last_name => patient['family_name'],
-                    :phone_number => "",
-                    :id => patient_id,
-                    :email => "",
-                    :date_of_birth => (patient['birthdate'].to_date.strftime('%Y%m%d') rescue nil),
-                    :gender => patient['gender'] 
-            }      
-            sample_typees[order_date] = {
-                "status": "specimen_accepted",
-                "updated_by": {
-                    "first_name": orderer['given_name'],
-                    "last_name": orderer['family_name'],
-                    "phone_number": "",
-                    "id": orderer['id'],
-                }
-            }
 
-            start_date =  order_date
-            res =  Order.create(
-                    tracking_number: t_num,
-                    sample_type: sample_type,
-                    date_created: order_date,
-                    sending_facility: $settings['site_name'],
-                    receiving_facility: $settings['target_lab'],
-                    tests: tests_ordered,
-                    test_results: formatted_results,
-                    patient: patient_,
-                    order_location: "ART",
-                    district: $settings['district'],
-                    priority: "Routine",
-                    who_order_test: who_order,
-                    sample_statuses: sample_typees,
-                    test_statuses: test_statues,
-                    sample_status: "specimen_accepted",
-                    art_start_date: (patient['start_date'].to_datetime.strftime("%Y%m%d%H%M%S") rescue nil), 
-                ) 
+      else
+        @logger.info("attempting updating result for  #{data_e["lab_id"].to_s}, with message #{result['message']} , #{result['data']}")
+        status_data = {
+          "tracking_number" => tracking_number,
+          "test_status" => data_e["test_status"],
+          "test_name" => "Covid19",
+          "result_date" => data_e["test_result_date"],
+          "who_updated" => {
+                              'id':'31',
+                              'phone_number':'',
+                              'first_name':'Bernard',
+                              'last_name':'Kanfosi'
+                           }
+        }
 
-            data = {
-                    tracking_number: t_num,
-                    sample_type: sample_type,
-                    date_created: order_date,
-                    sending_facility: $settings['site_name'],
-                    receiving_facility: $settings['target_lab'],
-                    tests: tests_ordered,
-                    test_results: formatted_results,
-                    patient: patient_,
-                    order_location: "ART",
-                    district: $settings['district'],
-                    requesting_clinician: '',
-                    priority: "Routine",
-                    who_order_test: who_order,
-                    sample_statuses: sample_typees,
-                    test_statuses: test_statues,
-                    sample_status: "specimen_accepted",
-                    art_start_date: (patient['start_date'].to_datetime.strftime("%Y%m%d%H%M%S") rescue nil), 
-            }
+        dataJSON = JSON.generate(status_data)
+        @logger.info("sending reult data to send_json -- Update Result    #{data_e["lab_id"].to_s}" )
+        status_update = send_json(dataJSON, "update_status")
+        @logger.info("#{status_update.to_yaml}")
 
-
-            if res['tracking_number'] == t_num
-                c_id = res['_id']
-                order_type = "4" # standing for LAB order
-                orderer_id =  orderer['id']  
-                discontinued = 0       
-                creator =   orderer['id']  
-                date_created = order_date
-                voided = 0      
-                patient_id = patient['npid2']
-                accession_number = t_num
-                order_location =  265
-                concept_id =  get_concept(bart2_con,sample_type)
-                encouter_id = create_encounter(bart2_con,patient_id,order_location,date_created,orderer_id)   
-                #obs_id = create_observation(bart2_con,patient['npid2'],encouter_id,order_location,concept_id,date_created)
-    
-                order_counter = bart2_con.query("SELECT MAX(order_id) AS total FROM orders").as_json[0]['total'].to_i +  1
-                uuid = get_uuid(con)
-                if results_checker == false
-                bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,patient_id,accession_number,uuid)
-                        VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{patient_id}','#{accession_number}','#{uuid}')")
-                else
-                    voided = 0
-                    date_voided = date_given
-                    voided_by =  orderer['id']  
-                    void_reason = "result given"
-                    #bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,date_voided,voided_by,void_reason,patient_id,accession_number,uuid)
-                    #VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{date_voided}','#{voided_by}','#{void_reason}','#{patient_id}','#{accession_number}','#{uuid}')")
-                    bart2_con.query("INSERT INTO orders (order_id,order_type_id,concept_id,orderer,encounter_id,instructions,start_date,discontinued,creator,date_created,voided,patient_id,accession_number,uuid)
-                        VALUES('#{order_counter}','#{order_type}','#{concept_id}','#{orderer_id}','#{encouter_id}','#{c_id}','#{start_date}','#{discontinued}','#{creator}','#{date_created}','#{voided}','#{patient_id}','#{accession_number}','#{uuid}')")
-                end
-                OrderService.create_order_v2(data,t_num,c_id)
-    
-                migrated_orders = migrated_orders + 1
-            end         
+        if (status_update["error"] == false)
+          @logger.info("Just updated the status for  #{data_e["lab_id"].to_s}")
+          puts "Just updated the status for " + data_e["lab_id"].to_s
+        else
+          @logger.info("Failed to update the status for  #{data_e["lab_id"].to_s}")
+          puts "Failed to update the status for " + data_e["lab_id"].to_s
         end
-    else
-            orders_without_tests.push(row['Sample_ID'])
-            # order without tests
-            count = JSON.parse(File.read("#{Rails.root}/public/orders_with_no_tests.json"))
-            count['Samples'] = count['Samples'].push(row["Sample_ID"])
+      end
+    end
+  else
+    if (!data_e["test_result"].blank?)
+      @logger.info("This #{data_e["lab_id"].to_s} has a test result ")
+      res_data = {
+          "tracking_number" => data_e["tracking_number"],
+          "test_status" => 'verified',
+          "test_name" => "Covid19",
+          "result_date" => data_e["test_result_date"],
+          "who_updated" => {
+                                'id':'31',
+                                'phone_number':'',
+                                'first_name':'Bernard',
+                                'last_name':'Kanfosi'
+                            },
+          "results" => {
+                        "Covid19":"#{data_e["test_result"]}"   
+                       }  
+        }
 
-            File.open("#{Rails.root}/public/orders_with_no_tests.json", 'w') {|f|
-            f.write(count.to_json)}
-    end
-    
-    if !File.exists?("#{Rails.root}/public/sample_tracker") 
-        FileUtils.touch("#{Rails.root}/public/sample_tracker") 
-        File.open("#{Rails.root}/public/sample_tracker",'w') { |t|
-            t.write(row['Sample_ID'])
-        } 
+      dataJSON = JSON.generate(res_data)
+      @logger.info("sending reult data to send_json -- Update Result    #{data_e["lab_id"].to_s}" )
+      res_update = send_json(dataJSON, "update_result")
+      @logger.info("#{res_update.to_yaml}")
+
+      if (res_update["error"] == false)
+        @logger.info("Just updated the result for  #{data_e["lab_id"].to_s}")
+        puts "Just updated the result for " + data_e["lab_id"].to_s
+      else
+        @logger.info("Failed to update the result for  #{data_e["lab_id"].to_s}")
+          puts "Failed to update the result for " + data_e["lab_id"].to_s
+      end
     else
-        File.open("#{Rails.root}/public/sample_tracker",'w') { |t|
-            t.write(row['Sample_ID'])
-        } 
+      @logger.info("attempting updating result for  #{data_e["lab_id"].to_s}, with message #{result['message']} , #{result['data']}")
+
+      stat_data = {
+          "tracking_number" => data_e["tracking_number"],
+          "test_status" => data_e["test_status"],
+          "test_name" => "Covid19",
+          "result_date" => data_e["result_date"],
+          "who_updated" => {
+                                'id':'31',
+                                'phone_number':'',
+                                'first_name':'Bernard',
+                                'last_name':'Kanfosi'
+                            }
+        }
+
+      dataJSON = JSON.generate(stat_data)
+
+      @logger.info("sending reult data to send_json -- Update Result    #{data_e["lab_id"].to_s}" )
+      stat_update = send_json(dataJSON, "update_status")
+      @logger.info("#{status_update.to_yaml}")
+
+      if (stat_update["error"] == false)
+        @logger.info("Just updated the status for  #{data_e["lab_id"].to_s}")
+        puts "Just updated the status for " + data_e["lab_id"].to_s
+      else
+        @logger.info("Failed to update the status for  #{data_e["lab_id"].to_s}")
+        puts "Failed to update the status for " + data_e["lab_id"].to_s
+      end
     end
-     
-    
+  end 
+ 
 end
+
+#Print results of the migration
 
 puts "Done!!"
-puts "Total Orders: " + total.to_s
-puts "Orders Migrated: " + migrated_orders.to_s
-puts "Orders Not Migrated: " + (total.to_i - migrated_orders.to_i).to_s
-puts " "
-puts " "
-puts "Orders without patients: " + orders_with_no_patients.length.to_s
-puts "Orders without tests: "        + orders_without_tests.length.to_s
