@@ -1,3 +1,23 @@
+# Script to migrate Covid19 data into NLIMS
+# Developer: Precious Bondwe
+
+# Gets source data
+# 1 Checks if a record has a tracking number. (Tracking number is a pointer to show that the record exists in NLIMS)
+# 1.1 If tracking number exists, checks if the record has a result
+# 1.1.1 If the record has a result
+#       It updates MLIMS with a result
+# 1.1.2 If the record does not have a result
+#       It updates the record status in NLIMS
+# 1.2 If tracking record does not have a tracking number
+#     It creates an order in NLIMS, and retrieves the tracking number
+#     It updates the record with the Tracking number in above
+# 1.2.1 If the record has a result
+#       It updates MLIMS with a result
+# 1.2.2 If the record does not have a result
+#       It updates the record status in NLIMS
+# Logs the activity
+
+
 require 'io/console'
 require 'json'
 require 'rubygems'
@@ -29,7 +49,7 @@ def load_defaults()
   @logger_debug = Logger.new("migration_log_debug#{Time.parse(DateTime.now.to_s)}.txt")
   @logger_transactional = Logger.new("migration_log_transactional#{Time.parse(DateTime.now.to_s)}.txt")
 
-  #mapping of statuses Covid19-Data => NLIMS 
+  #mapping of statuses: Covid19-Data => NLIMS 
   @statuses = {
               'Inputted' => 'started',
               'Rejected' => 'test_rejected',
@@ -42,6 +62,11 @@ def load_defaults()
 end
 
 def validate_token(m_token)
+  # Method to check if the token is valid
+  # input: current token
+  # Output: returns a new token if the one provided is expired, or returns the same one if it is not expired
+  # Developer: Precious Bondwe
+
   headers = {
     content_type: "application/json",
     token: m_token
@@ -78,6 +103,11 @@ def validate_token(m_token)
 end
 
 def send_json(json_obj, target_function)
+  # Method to send a json object to the NLIMS end points
+  # input: Json Object, function to execute 
+  # output: the result of the action, whether it has an error or not
+  # Developer: Precious Bondwe
+
 
   headers = {
       content_type: "application/json",
@@ -104,6 +134,11 @@ def send_json(json_obj, target_function)
 end
 
 def log_results(rep)
+  # Method to log current activity
+  # input: hash containing the message to log 
+  # output: Nothing
+  # Developer: Precious Bondwe
+  
   # logging results to file
   # Actions taking place on a record
   # 1 => Create Order in NLIMS
