@@ -59,6 +59,34 @@ def load_defaults()
               'Dispatched' => 'verified',
               'In-Transit' => 'completed'
             }
+  #load health facility names from excel file
+  @health_facilities = load_facilities
+
+  raise @health_facilities['3127'].to_yaml
+end
+
+def load_facilities
+  # Method to load facilities from the Malawi Health Facilities File
+  # input: Nothing
+  # Output: returns hash with facility codes and names
+  # Developer: Precious Bondwe
+
+  facilities = {}
+
+  file_path = "#{Rails.root}/config/malawi_health_facilities.xlsx"
+  workbook = RubyXL::Parser.parse("#{file_path}")
+  worksheet = workbook[0]
+  
+  x = 0
+  worksheet.each do |row|
+    if x == 0 # skip the headers
+      x += 1
+    else
+      facilities.store("#{row.cells[0].value}","#{row.cells[2].value}")
+      x += 1
+    end  
+  end
+  return facilities
 end
 
 def validate_token(m_token)
@@ -339,7 +367,7 @@ covid_data.each do |data_e|
         }
 
       dataJSON = JSON.generate(res_data)
-      @logger_debug.info("sending reult data to send_json -- Update Result    #{data_e["lab_id"].to_s}" )
+      @logger_debug.info("sending result data to send_json -- Update Result    #{data_e["lab_id"].to_s}" )
       res_update = send_json(dataJSON, "update_result")
       
       if (res_update["error"] == false)
