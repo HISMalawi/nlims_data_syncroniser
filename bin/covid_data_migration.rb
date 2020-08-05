@@ -267,6 +267,7 @@ source_conn = Mysql2::Client.new(:host => @source_host,
                                  :username => @source_username,
                                  :password => @source_password,
                                  :database => @source_database)
+
 exclude_records = "'" + @records_to_exclude.join("','") + "'"
 
 
