@@ -47,7 +47,6 @@ def load_defaults()
   @pass = covid_conf['target']['other_password']
 
   @logger_debug = Logger.new("migration_log_debug#{Time.parse(DateTime.now.to_s)}.txt")
-  @logger_transactional = Logger.new("migration_log_transactional#{Time.parse(DateTime.now.to_s)}.txt")
 
   #mapping of statuses: Covid19-Data => NLIMS 
   @statuses = {
@@ -62,7 +61,73 @@ def load_defaults()
   #load health facility names from excel file
   @health_facilities = load_facilities
 
-  raise @health_facilities['3127'].to_yaml
+  @records_to_exclude = get_already_processed_records
+
+end
+
+def create_log_file
+  # Method to create a log file for migration
+  # input: nothing 
+  # output: Nothing
+  # Developer: Precious Bondwe
+
+  file_path = "#{Rails.root}/log/migration_log.xlsx"
+
+  if not File.exists?(file_path)
+    #if file does not exist, create a new one with headers
+    workbook = RubyXL::Workbook.new
+    worksheet = workbook.add_worksheet('data_log')
+    
+    worksheet.add_cell(0,0,'LabID')
+    worksheet.add_cell(0,1,'TrackingNo')
+    worksheet.add_cell(0,2,'Result')
+    worksheet.add_cell(0,3,'Status')
+    worksheet.add_cell(0,4,'CreateOrder')
+    worksheet.add_cell(0,5,'UpdateTrackingNo')
+    worksheet.add_cell(0,6,'UpdateResult') 
+    worksheet.add_cell(0,7,'UpdateStatus')
+
+    workbook.write(file_path)
+  end
+
+end
+
+def log_results(rep)
+  # Method to log current activity
+  # input: hash containing the message to log 
+  # output: Nothing
+  # Developer: Precious Bondwe
+  
+  # logging results to file
+  # Actions taking place on a record
+  # 1 => Create Order in NLIMS
+  # 2 => Update Tracking number in EID/VL
+  # 3 => Update Result in NLIMS
+  # 4 => Update status in NLIMS
+  # Structure of Report (LabID, Tracking NUmber, Result, Status, actions {})
+
+  file_path = "#{Rails.root}/log/migration_log.xlsx"
+  if not File.exists?(file_path)
+    #if file does not exist, create a new one with headers
+    create_log_file
+  else
+    workbook = RubyXL::Parser.parse("#{file_path}")
+    worksheet = workbook['data_log']
+    total_rows = worksheet.count
+
+    # worksheet.insert_row(total_rows)
+    worksheet.add_cell(total_rows,0,"#{rep["labid"]}")
+    worksheet.add_cell(total_rows,1,"#{rep["trackingno"]}")
+    worksheet.add_cell(total_rows,2,"#{rep["result"]}")
+    worksheet.add_cell(total_rows,3,"#{rep["status"]}")
+    worksheet.add_cell(total_rows,4,"#{rep["createorder"]}")
+    worksheet.add_cell(total_rows,5,"#{rep["updatetrackingno"]}")
+    worksheet.add_cell(total_rows,6,"#{rep["updateresult"]}") 
+    worksheet.add_cell(total_rows,7,"#{rep["updatestatus"]}")
+
+    workbook.write(file_path)
+  end
+
 end
 
 def load_facilities
@@ -87,6 +152,37 @@ def load_facilities
     end  
   end
   return facilities
+end
+
+def get_already_processed_records
+  # Method to load facilities from the Malawi Health Facilities File
+  # input: Nothing
+  # Output: returns hash with facility codes and names
+  # Developer: Precious Bondwe
+
+  processed_records = []
+
+  file_path = "#{Rails.root}/log/migration_log.xlsx"
+
+  if not File.exists?(file_path)
+    #if file does not exist, create a new one with headers
+    create_log_file
+  else
+  
+    workbook = RubyXL::Parser.parse("#{file_path}")
+    worksheet = workbook[0]
+    
+    x = 0
+    worksheet.each do |row|
+      if x == 0 # skip the headers
+        x += 1
+      else
+        processed_records << "#{row.cells[0].value}"
+        x += 1
+      end 
+    end 
+  end
+  return processed_records
 end
 
 def validate_token(m_token)
@@ -161,23 +257,7 @@ def send_json(json_obj, target_function)
 
 end
 
-def log_results(rep)
-  # Method to log current activity
-  # input: hash containing the message to log 
-  # output: Nothing
-  # Developer: Precious Bondwe
-  
-  # logging results to file
-  # Actions taking place on a record
-  # 1 => Create Order in NLIMS
-  # 2 => Update Tracking number in EID/VL
-  # 3 => Update Result in NLIMS
-  # 4 => Update status in NLIMS
-  # Structure of Report (LabID, Tracking NUmber, Result, Status, actions {})
 
-@logger_transactional.info("LabID: #{rep["labid"]}, TrackingNo: #{rep["trackingno"]}, Result: #{rep["result"]}, Status: #{rep["status"]}, CreateOrder: #{rep["createorder"]}, UpdateTrackingNo: #{rep["updatetrackingno"]}, UpdateResult: #{rep["updateresult"]}, UpdateStatus: #{rep["updatestatus"]}")
-
-end
 puts "Starting time =>>>>> #{Time.now}"
 
 load_defaults
@@ -187,6 +267,7 @@ source_conn = Mysql2::Client.new(:host => @source_host,
                                  :username => @source_username,
                                  :password => @source_password,
                                  :database => @source_database)
+exclude_records = "'" + @records_to_exclude.join("','") + "'"
 
 
 covid_data = source_conn.query("SELECT 
@@ -217,8 +298,8 @@ covid_data = source_conn.query("SELECT
                                   INNER JOIN samplestatus ss
                                     ON cs.status = ss.ID
                                   LEFT JOIN results rs
-                                    on rs.id = cs.result")
-                               # WHERE cs.LabID='QECHCOV000193'")
+                                    on rs.id = cs.result
+                                WHERE cs.LabID NOT IN (#{exclude_records})")
 
 covid_data.each do |data_e|
 
@@ -236,7 +317,7 @@ covid_data.each do |data_e|
   if (data_e["tracking_number"].blank?) #check if the record has a tracking number
     data = {
       "district" => data_e["district"],
-      "health_facility_name" => data_e["health_facility_name"],
+      "health_facility_name" => @health_facilities["#{data_e["health_facility_name"]}"],
       "first_name" => data_e["first_name"],
       "last_name" => data_e["last_name"],
       "middle_name" => "", #data_e["middle_name"],
