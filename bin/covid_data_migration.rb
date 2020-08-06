@@ -60,8 +60,54 @@ def load_defaults()
             }
   #load health facility names from excel file
   @health_facilities = load_facilities
+  @districts = load_districts
+  @lab_codes = load_labcodes
 
   @records_to_exclude = get_already_processed_records
+
+end
+
+def load_districts
+  # Method to create a load districts
+  # input: nothing 
+  # output: list of districts
+  # Developer: Precious Bondwe
+
+  district_list = {}
+
+  source_conn = Mysql2::Client.new(:host => @source_host,
+                                 :username => @source_username,
+                                 :password => @source_password,
+                                 :database => @source_database)
+  
+  districts = source_conn.query("SELECT ID, name from districts")
+  districts.each do |row|
+    district_list.store("#{row["ID"]}", "#{row["name"]}")
+  end
+
+  return district_list
+end
+
+def load_labcodes
+  # Method to create a load labcodes
+  # input: nothing 
+  # output: list of lab codes
+  # Developer: Precious Bondwe
+
+  lab_codes = {}
+
+  source_conn = Mysql2::Client.new(:host => @source_host,
+                                 :username => @source_username,
+                                 :password => @source_password,
+                                 :database => @source_database)
+  
+  codes = source_conn.query("SELECT labcode, labname from labcodes")
+  codes.each do |row|
+    lab_codes.store("#{row["labcode"]}", "#{row["labname"]}")
+  end
+
+  return lab_codes
+
 
 end
 
