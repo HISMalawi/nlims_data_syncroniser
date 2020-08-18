@@ -24,10 +24,7 @@ class CouchdbMysqlSynchroniser
       seq = File.read("#{Rails.root}/tmp/couch_seq_number")
       res = JSON.parse(RestClient.get("#{protocol}://#{username}:#{password}@#{ip}:#{port}/#{db_name}/_changes?include_docs=true&limit=30&since=#{seq}"))
       docs = res['results']
-      seq  = res['last_seq']  
-      File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
-          f.write(seq)
-      }     
+
       puts "hello--------------"
      puts docs
       docs.each do |document|
@@ -40,11 +37,14 @@ class CouchdbMysqlSynchroniser
         else       
           OrderService.create_order(document,tracking_number,couch_id)         
         end
+         File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
+          f.write(document['seq'])
+         } 
       end
 
-      CouchdbMysqlSynchroniser.perform_in(0)
+      CouchdbMysqlSynchroniser.perform_in(300)
     rescue      
-      CouchdbMysqlSynchroniser.perform_in(0)
+      CouchdbMysqlSynchroniser.perform_in(300)
     end   
   end
  
