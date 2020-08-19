@@ -520,7 +520,6 @@ def send_json(json_obj, target_function)
 
   elsif (target_function == 'update_status')
     url = "#{@target_protocol}://#{@target_host}:#{@target_port}#{@target_prefix}update_test"  
-    #debugger
     res = JSON.parse(RestClient.post(url,json_obj,headers))
     return res
   else
@@ -598,7 +597,6 @@ end
 puts "Starting time =>>>>> #{Time.now}"
 
 load_defaults
-
 covid_data = "" # initialise the 
 
 if @method_of_pulling_data == 1 #source_database
@@ -613,7 +611,7 @@ puts "Total records ===> #{@total_records}"
 
 covid_data.each do |data_e|
   rec_count += 1
-  puts "Processing record ==> #{rec_count}"
+  puts "Processing record ==> #{rec_count}  of  #{@total_records}" 
 
   if @records_to_exclude.include?("#{data_e["LabID"]}") == false
     #!@records_to_exclude["#{data_e["lab_id"]}"] #only do this if the lab_id is not an=mong those to be skipped
@@ -621,19 +619,21 @@ covid_data.each do |data_e|
         data_district = data_e["district"]
         if @districts["#{data_district}"].nil?
           data_district = @mapped_district_to_lab["#{data_e["labcode"]}"]
+        else
+          data_district = @districts["#{data_district}"]
         end
         data_facility_code = data_e["health_facility_name"]
-        if @health_facilities["#{data_facility_code.to_i}"].nil?
+        if @health_facilities["#{data_facility_code}"].nil?
           data_facility_code = @mapped_facility_to_lab["#{data_e["labcode"]}"]
         else
-          data_facility_code = @health_facilities["#{data_facility_code.to_i}"]
+          data_facility_code = @health_facilities["#{data_facility_code}"]
         end
-        if data_e["first_name"].empty?
+        if data_e["first_name"].to_s.length == 0
           data_firstname = data_e["LabID"] 
         else
           data_firstname = data_e["first_name"].to_s.gsub("'", "''") 
         end
-        if data_e["last_name"].empty?
+        if data_e["last_name"].to_s.length == 0
           data_surname = data_e["labcode"] 
         else
           data_surname = data_e["last_name"].to_s.gsub("'", "''") 
@@ -682,19 +682,21 @@ covid_data.each do |data_e|
         data_district = data_e["patientResidenceDistrict"]
         if @districts["#{data_district}"].nil?
           data_district = @mapped_district_to_lab["#{data_e["labcode"]}"]
+        else
+          data_district = @districts["#{data_district}"]
         end
         data_facility_code = data_e["facilitycode"]
-        if @health_facilities["#{data_facility_code.to_i}"].nil?
+        if @health_facilities["#{data_facility_code}"].nil?
           data_facility_code = @mapped_facility_to_lab["#{data_e["labcode"]}"]
         else
-          data_facility_code = @health_facilities["#{data_facility_code.to_i}"]
+          data_facility_code = @health_facilities["#{data_facility_code}"]
         end
-        if data_e["firstname"].empty?
-          data_firstname = data_e["labID"] 
+        if data_e["firstname"].to_s.length == 0
+          data_firstname = data_e["LabID"] 
         else
           data_firstname = data_e["firstname"].to_s.gsub("'", "''")
         end
-        if data_e["surname"].empty?
+        if data_e["surname"].to_s.length == 0
           data_surname = data_e["labcode"] 
         else
           data_surname = data_e["surname"].to_s.gsub("'", "''") 
@@ -885,10 +887,11 @@ covid_data.each do |data_e|
           end
 
         else
-          @logger_debug.info("attempting updating status for  #{data_lab_id.to_s}")
+          @logger_debug.info("attempting to update status for  #{data_lab_id.to_s}")
+
           status_data = {
             "tracking_number" => tracking_number,
-            "test_status" => @statuses["#{data_state}"],
+            "test_status" => data_state,
             "test_name" => "Covid19",
             "result_date" => data_date_approved,
             "who_updated" => {
@@ -954,7 +957,7 @@ covid_data.each do |data_e|
 
         stat_data = {
             "tracking_number" => data_trackingno,
-            "test_status" => @statuses["#{data_state}"],
+            "test_status" => data_state,
             "test_name" => "Covid19",
             "result_date" => data_date_approved,
             "who_updated" => {
@@ -966,8 +969,7 @@ covid_data.each do |data_e|
           }
 
         dataJSON = JSON.generate(stat_data)
-
-        @logger_debug.info("sending reult data to send_json -- Update Result    #{data_lab_id.to_s}" )
+        @logger_debug.info("sending reult data to send_json -- Update State    #{data_lab_id.to_s}" )
         stat_update = send_json(dataJSON, "update_status")
       
         if (stat_update["error"] == false)
