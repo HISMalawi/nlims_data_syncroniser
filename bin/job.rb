@@ -48,6 +48,9 @@ begin
             }           
           end
       end until docs.empty?
-rescue Exemption => e
+rescue Exception => e
      `echo "#{Time.now } => #{e}" >> "#{Rails.root}/log/nlims_couch_mysql_sync.log"`
+      if FileUtils.rm('/tmp/nlims_couch_mysql_sync.pid')
+	 puts 'Removed Process Tracker Successfully'
+      end
 end
