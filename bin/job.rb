@@ -1,6 +1,13 @@
 require 'rest-client'
 require 'order_service'
 
+begin 
+      if File.exists?('/tmp/nlims_couch_mysql_sync.pid')
+        puts 'Another Instance is running'
+	exit
+      else
+	      FileUtils.touch('/tmp/nlims_couch_mysql_sync.pid')
+      end
 
       if !File.exists?("#{Rails.root}/log/nlims_couch_seq_number")
         FileUtils.touch "#{Rails.root}/log/nlims_couch_seq_number"
@@ -35,9 +42,12 @@ require 'order_service'
             else       
               OrderService.create_order(document,tracking_number,couch_id)         
       	    end
-            File.open("#{Rails.root}/log/nlims_couch_seq_number",'w'){ |f|
+
+     	File.open("#{Rails.root}/log/nlims_couch_seq_number",'w'){ |f|
              f.write(document['seq'])
             }           
           end
-          
       end until docs.empty?
+rescue Exemption => e
+     `echo "#{Time.now } => #{e}" >> "#{Rails.root}/log/nlims_couch_mysql_sync.log"`
+end
