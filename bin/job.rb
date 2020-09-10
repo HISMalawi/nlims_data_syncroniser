@@ -4,6 +4,7 @@ require 'order_service'
 begin 
       if File.exists?('/tmp/nlims_couch_mysql_sync.pid')
         puts 'Another Instance is running'
+        exit
 	exit
       else
 	      FileUtils.touch('/tmp/nlims_couch_mysql_sync.pid')
