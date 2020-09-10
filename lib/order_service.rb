@@ -746,7 +746,7 @@ module  OrderService
                               test_id: tst_obj.id,
                               result: rst['result_value'],	
                               device_name: '',						
-                              time_entered: rst['date_result_entered']	 # ms['date_result_given']
+                              time_entered: rst['date_result_entered'] || test_results['date_result_entered']
                         )  
                     else
                       TestResult.create(
@@ -754,7 +754,7 @@ module  OrderService
                               test_id: tst_obj.id,
                               result: rst['result_value'],	
                               device_name: '',						
-                              time_entered: rst['date_result_entered'] # ms['date_result_given']
+                              time_entered: rst['date_result_entered'] || test_results['date_result_entered']
                         )                     
                     end
                   end
