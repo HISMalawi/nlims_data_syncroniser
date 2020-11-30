@@ -5,9 +5,8 @@ begin
       if File.exists?('/tmp/nlims_couch_mysql_sync.pid')
         puts 'Another Instance is running'
         exit
-	exit
       else
-	      FileUtils.touch('/tmp/nlims_couch_mysql_sync.pid')
+        FileUtils.touch('/tmp/nlims_couch_mysql_sync.pid')
       end
 
       if !File.exists?("#{Rails.root}/log/nlims_couch_seq_number")
@@ -49,7 +48,10 @@ begin
             }           
           end
       end until docs.empty?
-rescue Exception => e
+      if FileUtils.rm('/tmp/nlims_couch_mysql_sync.pid')
+         puts 'Removed Process Tracker Successfully'
+      end
+rescue => e
      `echo "#{Time.now } => #{e}" >> "#{Rails.root}/log/nlims_couch_mysql_sync.log"`
       if FileUtils.rm('/tmp/nlims_couch_mysql_sync.pid')
 	 puts 'Removed Process Tracker Successfully'
