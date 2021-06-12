@@ -22,7 +22,7 @@ namespace :nlims do
           docs = res['results']
           
           docs.each do |document|
-            puts "-------------------------"       
+            puts "--in--------"       
             
             tracking_number = document['doc']['tracking_number']
             puts tracking_number
