@@ -14,8 +14,7 @@
   port = config['port']
   protocol = config['protocol']
   seq = File.read("#{Rails.root}/tmp/couch_seq_number")
-  
-  res = JSON.parse(RestClient.get("#{protocol}://#{username}:#{password}@#{ip}:#{port}/#{db_name}/_changes?include_docs=true&limit=30&since=#{seq}"))
+  res = JSON.parse(RestClient.get("#{protocol}://#{username}:#{password}@#{ip}:#{port}/#{db_name}/_changes?include_docs=true&limit=3000&since=#{seq}"))
   docs = res['results']
   
   docs.each do |document|
@@ -23,6 +22,7 @@
     
     tracking_number = document['doc']['tracking_number']
     puts tracking_number
+    next if tracking_number.include?("XLLH")
     ss = OrderService.check_order(tracking_number)
   
     next if !document['deleted'].blank?

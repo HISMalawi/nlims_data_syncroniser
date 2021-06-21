@@ -436,7 +436,10 @@ module  OrderService
             who_order_f_name = document['who_order_test']['first_name']
             who_order_l_name = document['who_order_test']['last_name']
             who_order_phone_number = document['who_order_test']['phone_number']
-            
+            return [false,'its an order request'] if sample_type.blank?
+            return [false,'its an order request'] if sample_type == "not_assigned"
+	    return [false,'its an order request'] if sample_type == "not_specified"
+
             ward_id = OrderService.get_ward_id(ward)
             sample_type_id = OrderService.get_specimen_type_id(sample_type)
             sample_status_id = OrderService.get_specimen_status_id(sample_status)
@@ -476,7 +479,11 @@ module  OrderService
                                           )                           
                   end
             p_id = patient_obj.id
-            tests.each do |tst_name,tst_value|              
+            tests.each do |tst_name,tst_value|    
+	      tst_name = "CrAg" if tst_name == "Cr Ag"  
+	      tst_name = "Cryptococcus Antigen Test" if tst_name == "Cryptococcal Antigen"
+              tst_name = "FBC" if tst_name == "Fbs"
+	      tst_name = "Creatine" if tst_name =="Creat"
               test_id = OrderService.get_test_type_id(tst_name)
               test_status = tst_value[tst_value.keys[tst_value.keys.count - 1]]['status']
               test_status_id = OrderService.get_status_id(test_status)
@@ -517,7 +524,9 @@ module  OrderService
               
               unless test_results.blank?
                 if test_results['results'].keys.count > 0
-                  test_results['results'].keys.each do |ms|                  
+                  test_results['results'].keys.each do |ms|    
+		    ms = "Bilirubin Total(TBIL-VOX)" if ms == "TBIL-VOX"
+                    ms = "Bilirubin Direct(DBIL-VOX)"  if ms == "DBIL-VOX"              
                     measur_id = OrderService.get_measure_id(ms)
                     rst = test_results['results'][ms]                              
                     TestResult.create(
@@ -525,7 +534,7 @@ module  OrderService
                             test_id: tst_obj.id,
                             result: rst['result_value'],	
                             device_name: '',						
-                            time_entered: '2018-09-21 04:38:02' # ms['date_result_given']
+                            time_entered: '' # ms['date_result_given']
                     )
                   end
                 end   
@@ -684,6 +693,7 @@ module  OrderService
               )
               
               count = tst_value.keys.count
+
               t_count = TestStatusTrail.find_by_sql("SELECT count(*) AS t_count FROM test_status_trails WHERE test_id='#{tst_obj.id}'")[0]['t_count']
    
               if ((count - t_count) == 1) && count > t_count
