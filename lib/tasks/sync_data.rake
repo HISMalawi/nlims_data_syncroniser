@@ -26,15 +26,15 @@ namespace :nlims do
             
             tracking_number = document['doc']['tracking_number']
             puts tracking_number
-            ss = OrderService.check_order(tracking_number)
-          
+                     
             next if !document['deleted'].blank?
             couch_id =  document['doc']['_id']
             if OrderService.check_order(tracking_number) == true                 
               OrderService.update_order(document,tracking_number)
-            else                
-             
-              OrderService.create_order(document,tracking_number,couch_id)         
+            else        
+              if OrderService.check_data_anomalies(document) == true
+                OrderService.create_order(document,tracking_number,couch_id)  
+              end
             end
              File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
               f.write(document['seq'])

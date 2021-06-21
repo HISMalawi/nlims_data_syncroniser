@@ -18,11 +18,9 @@ module  OrderService
                                           phone_number: params[:patient][:phone_number],
                                           address: "",
                                           external_patient_number:  "" 
-                                          )
-                           
+                                          )                           
                   end
-
-                              
+                  
             who_order = {
                   :first_name => params[:who_order_test][:first_name],
                   :last_name => params[:who_order_test][:last_name],
@@ -413,8 +411,42 @@ module  OrderService
 
     end
 
+    def self.check_data_anomalies(doc)
+      specimen_type = doc['sample_type']
+      tests = doc['tests']
+      status = true
+      res = SpecimenType.find_by_sql("SELECT * FROM specimen_types WHERE name =#{specimen_type}")
+      if res.blank?
+        CreateDataAnomalies.create(
+          :data_type => "specimen type",
+          :data => specimen_type,
+          :site_name => doc['doc']['sending_facility'],
+          :tracking_number => doc['doc']["tracking_number"],
+          :couch_id => doc['doc']["_id"],
+          :date_created => Time.new.strftime("%Y%m%d%H%M%S"),
+          :status => "not-resolved"
+        )
+        status = false
+      end
+
+      if res.blank?
+        CreateDataAnomalies.create(
+          :data_type => "test type",
+          :data => specimen_type,
+          :site_name => doc['doc']['sending_facility'],
+          :tracking_number => doc['doc']["tracking_number"],
+          :couch_id => doc['doc']["_id"],
+          :date_created => Time.new.strftime("%Y%m%d%H%M%S"),
+          :status => "not-resolved"
+        )
+        status = false
+      end
+
+      return status
+    end
+
     def self.create_order(document,tracking_number,couch_id)
-    
+     
             document = document['doc']            
             patient_id = document['patient']['id']
             patient_f_name = document['patient']['first_name']
@@ -432,10 +464,10 @@ module  OrderService
             sample_type = document['sample_type']
             sending_facility = document['sending_facility']
 
-            who_order_id = document['who_order_test']['id']
-            who_order_f_name = document['who_order_test']['first_name']
-            who_order_l_name = document['who_order_test']['last_name']
-            who_order_phone_number = document['who_order_test']['phone_number']
+            who_order_id = document['who_order_test']['id'] rescue ""
+            who_order_f_name = document['who_order_test']['first_name'] rescue ""
+            who_order_l_name = document['who_order_test']['last_name'] rescue ""
+            who_order_phone_number = document['who_order_test']['phone_number'] rescue ""
             
             ward_id = OrderService.get_ward_id(ward)
             sample_type_id = OrderService.get_specimen_type_id(sample_type)
@@ -601,6 +633,7 @@ module  OrderService
 
     def self.update_order(document,tracking_number)
             puts "migrating v2--------------------------------"
+            puts tracking_number
             document = document['doc']            
             patient_id = document['patient']['id']
             patient_f_name = document['patient']['first_name']
@@ -682,7 +715,7 @@ module  OrderService
                       :time_created => date_created,
                       :test_status_id => test_status_id 
               )
-              
+             
               count = tst_value.keys.count
               t_count = TestStatusTrail.find_by_sql("SELECT count(*) AS t_count FROM test_status_trails WHERE test_id='#{tst_obj.id}'")[0]['t_count']
    
