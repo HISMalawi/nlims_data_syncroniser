@@ -412,12 +412,13 @@ module  OrderService
     end
 
     def self.check_data_anomalies(doc)
-      specimen_type = doc['sample_type']
-      tests = doc['tests']
+      specimen_type = doc['doc']['sample_type']
+      tests = doc['doc']['tests']
       status = true
-      res = SpecimenType.find_by_sql("SELECT * FROM specimen_types WHERE name =#{specimen_type}")
+      res = ""
+      res = SpecimenType.find_by_sql("SELECT * FROM specimen_types WHERE name ='#{specimen_type}'")
       if res.blank?
-        CreateDataAnomalies.create(
+        DataAnomaly.create(
           :data_type => "specimen type",
           :data => specimen_type,
           :site_name => doc['doc']['sending_facility'],
@@ -428,18 +429,20 @@ module  OrderService
         )
         status = false
       end
-
-      if res.blank?
-        CreateDataAnomalies.create(
-          :data_type => "test type",
-          :data => specimen_type,
-          :site_name => doc['doc']['sending_facility'],
-          :tracking_number => doc['doc']["tracking_number"],
-          :couch_id => doc['doc']["_id"],
-          :date_created => Time.new.strftime("%Y%m%d%H%M%S"),
-          :status => "not-resolved"
-        )
-        status = false
+      tests.each do |test_type|
+      res = TestType.find_by_sql("SELECT * FROM test_types WHERE name ='#{test_type}'")
+      	if res.blank?
+       		 DataAnomaly.create(
+         	 :data_type => "test type",
+         	 :data => test_type,
+          	 :site_name => doc['doc']['sending_facility'],
+          	 :tracking_number => doc['doc']["tracking_number"],
+          	 :couch_id => doc['doc']["_id"],
+          	 :date_created => Time.new.strftime("%Y%m%d%H%M%S"),
+          	 :status => "not-resolved"
+        	)
+            status = false
+         end
       end
 
       return status
