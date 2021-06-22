@@ -430,6 +430,7 @@ module  OrderService
         status = false
       end
       tests.each do |test_type|
+	test_type = "Cross-Match" if test_type == "Cross Match"
       res = TestType.find_by_sql("SELECT * FROM test_types WHERE name ='#{test_type}'")
       	if res.blank?
        		 DataAnomaly.create(
@@ -711,7 +712,8 @@ module  OrderService
            
             tests = document['test_statuses']
             
-            tests.each do |tst_name,tst_value|              
+            tests.each do |tst_name,tst_value|  
+              tst_name = "Cross-match" if tst_name == "Cross Match"            
               test_id = OrderService.get_test_type_id(tst_name)
               test_status = tst_value[tst_value.keys[tst_value.keys.count - 1]]['status']
               test_status_id = OrderService.get_status_id(test_status)
@@ -731,9 +733,12 @@ module  OrderService
               )
              
               count = tst_value.keys.count
+puts tst_name
+              t_tst_id_ =  tst_obj.id
+              t_count = TestStatusTrail.find_by_sql("SELECT count(*) AS t_count FROM test_status_trails WHERE test_id='#{t_tst_id_}'")[0]["t_count"]
 
-              t_count = TestStatusTrail.find_by_sql("SELECT count(*) AS t_count FROM test_status_trails WHERE test_id='#{tst_obj.id}'")[0]['t_count']
-   
+              if !t_count.blank?
+                #t_count = t_count[0]['t_count']
               if ((count - t_count) == 1) && count > t_count
                 value = tst_value[tst_value.keys[count - 1 ]]
                 status = value['status']
@@ -773,6 +778,7 @@ module  OrderService
                     )
                     
                 end
+		end
               end
              
               test_results = document['test_results'][tst_name]

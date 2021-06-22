@@ -1,4 +1,6 @@
-  if !File.exists?("#{Rails.root}/tmp/couch_seq_number")
+ require "order_service.rb"
+ 
+ if !File.exists?("#{Rails.root}/tmp/couch_seq_number")
     FileUtils.touch "#{Rails.root}/tmp/couch_seq_number"
     seq = "0"
     File.open("#{Rails.root}/tmp/couch_seq_number",'w'){ |f|
@@ -26,7 +28,9 @@
     next if !document['deleted'].blank?
     couch_id =  document['doc']['_id']
     if OrderService.check_order(tracking_number) == true                 
-      OrderService.update_order(document,tracking_number)
+        if OrderService.check_data_anomalies(document) == true    
+           OrderService.update_order(document,tracking_number)
+        end
     else                
         if OrderService.check_data_anomalies(document) == true
   	    OrderService.create_order(document,tracking_number,couch_id)
