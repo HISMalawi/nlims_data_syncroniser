@@ -32,6 +32,11 @@
         border: 1px solid #ccc;
         border-top: none;
     }
+    .float-right{
+        float: right!important;
+        margin:auto!important;
+        background-color:green!important;
+    }
 
 </style>
 
@@ -86,6 +91,7 @@
         <div class="tab">
             <button class="tablinks" onclick="openTab(event, 'add')">Add Site</button>
             <button class="tablinks" onclick="openTab(event, 'edit')">Edit Site</button>
+            <button class="tablinks float-right btn" onclick="openTab(event, 'new-site')">New Site</button>
             <span style="float:right" id="info"> </span>
         </div>
         
@@ -175,6 +181,60 @@
                 </form>
             </div>
         </div>
+
+        <div id="new-site" class="tabcontent">
+          
+        <div>
+            <form class="form">
+                <div class="form-group">
+                        <label>Site name:</label>
+                        <input id="site_name" type="text" class="form-control" name="site_name">
+                </div>
+                <div class="form-group">
+                    <label>Site code:</label>
+                    <input id="site_codee" type="text" class="form-control" name="site_code">
+                </div>
+                <div class="form-group">
+                    <label>Site district:</label>
+                    <input id="site_district" type="text" class="form-control" name="site_district">
+                </div>
+                <div class="form-group">
+                    <label>Site region:</label>
+                    <input id="site_region" type="text" class="form-control" name="site_region">
+                </div>
+                <div class="form-group">
+                    <label>Site code:</label>
+                    <input id="site_description" type="text" class="form-control" name="site_description">
+                </div>
+                <div class="form-group">
+                    <label>Site Latitude:</label>
+                    <input id="site_latitude" type="text" class="form-control" name="site_latitude">
+                </div>
+                <div class="form-group">
+                    <label>Site Longitude:</label>
+                    <input id="site_longitude" type="text" class="form-control" name="site_longitude">
+                </div>
+                <div class="form-group">
+                        <label>IP address: 0.0.0.0 </label>
+                        <input id="ipp" type="text" class="form-control" name="ip">
+                </div>
+                <div class="form-group">
+                        <label>Port: couchdb-port-5984</label>
+                        <input id="portt" type="text" class="form-control" name="port">
+                </div>
+                <div class="form-group">
+                        <label>Couch-username</label>
+                        <input id="ccouch_username" type="text" class="form-control" name="couch_username">
+                </div>
+                <div class="form-group">
+                        <label>Couch-password</label>
+                        <input id="ccouch_password" type="text" class="form-control" name="couch_password">
+                </div>
+                <button onclick="save_edit()" class="btn btn-success"> save </button>
+                <button onclick="disable()" class="btn btn-primary"> disable </button>
+            </form>
+        </div>
+    </div>
         
     </div>
 
