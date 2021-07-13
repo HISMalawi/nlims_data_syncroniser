@@ -192,7 +192,7 @@
         <div id="new-site" class="tabcontent">
           
         <div>
-            <form class="form">
+            <form class="form" method="POST">
                 <div class="form-group">
                     <label>Site name:</label>
                     <input id="siteName" type="text" class="form-control" name="site_name">
@@ -237,7 +237,7 @@
                     <label>Port: couchdb-port-5984</label>
                     <input id="couchPort" type="text" class="form-control" name="port">
                 </div>
-                <diclass="form-group">
+                <div class="form-group">
                     <label>Couch-username</label>
                     <input id="couchUsername" type="text" class="form-control" name="couch_username">
                 </div>
@@ -362,7 +362,6 @@
         });
     }
     document.querySelector("#save-new-site").addEventListener("click", function(e){
-        e.preventDefault()
         let siteName = document.getElementById("siteName").value
         let siteCode = document.getElementById("siteCode").value
         let siteDistrict = document.getElementById("siteDistrict").value
@@ -377,7 +376,7 @@
         let couchPort = document.getElementById("couchPort").value;
         let ipAddress = document.getElementById("IPAdress").value;
 
-        let url = `/save_new_site?site=${siteName}&code=${siteCode}&district=${siteDistrict}&region=${siteRegion}&description=${siteDescription}&latitude=${siteLatitude}&longitude=${siteLongitude}&applicationport=${siteApplicationPort}&hostaddress=${siteHostAddress}&couchusername=${couchUsername}&couchpassword=${couchPassword}&couchport=${couchPort}$ipaddress=${ipAddress}`
+        let url = `/save_new_site?site=${siteName}&code=${siteCode}&district=${siteDistrict}&region=${siteRegion}&description=${siteDescription}&latitude=${siteLatitude}&longitude=${siteLongitude}&applicationport=${siteApplicationPort}&hostaddress=${siteHostAddress}&couchusername=${couchUsername}&couchpassword=${couchPassword}&couchport=${couchPort}&ipaddress=${ipAddress}`
         console.log(url)
         var info = document.getElementById("info");
                     info.style.color = "green";
@@ -387,8 +386,7 @@
                 type: "post",
                 url: url,
                 success: function(res)
-                {
-                
+                {                
                     var info = document.getElementById("info");
                     info.style.color = "green";
                     info.innerHTML = "site saved";
