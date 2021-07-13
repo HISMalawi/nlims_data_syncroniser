@@ -35,7 +35,14 @@
     .float-right{
         float: right!important;
         margin:auto!important;
-        background-color:green!important;
+        background-color:rgb(128, 216, 128)!important;
+        color:white!important;
+    }
+    button.float-right{
+        padding:7px!important;
+        margin-top:6px!important;
+        margin-right:5px!important;
+        border-radius:3px;
     }
 
 </style>
@@ -91,7 +98,7 @@
         <div class="tab">
             <button class="tablinks" onclick="openTab(event, 'add')">Add Site</button>
             <button class="tablinks" onclick="openTab(event, 'edit')">Edit Site</button>
-            <button class="tablinks float-right btn" onclick="openTab(event, 'new-site')">New Site</button>
+            <button class="tablinks float-right" onclick="openTab(event, 'new-site')">New Site</button>
             <span style="float:right" id="info"> </span>
         </div>
         
@@ -187,52 +194,60 @@
         <div>
             <form class="form">
                 <div class="form-group">
-                        <label>Site name:</label>
-                        <input id="site_name" type="text" class="form-control" name="site_name">
+                    <label>Site name:</label>
+                    <input id="siteName" type="text" class="form-control" name="site_name">
                 </div>
                 <div class="form-group">
                     <label>Site code:</label>
-                    <input id="site_codee" type="text" class="form-control" name="site_code">
+                    <input id="siteCode" type="text" class="form-control" name="site_code">
                 </div>
                 <div class="form-group">
                     <label>Site district:</label>
-                    <input id="site_district" type="text" class="form-control" name="site_district">
+                    <input id="siteDistrict" type="text" class="form-control" name="site_district">
                 </div>
                 <div class="form-group">
                     <label>Site region:</label>
-                    <input id="site_region" type="text" class="form-control" name="site_region">
+                    <input id="siteRegion" type="text" class="form-control" name="site_region">
                 </div>
                 <div class="form-group">
-                    <label>Site code:</label>
-                    <input id="site_description" type="text" class="form-control" name="site_description">
+                    <label>Site description:</label>
+                    <input id="siteDescription" type="text" class="form-control" name="site_description">
                 </div>
                 <div class="form-group">
                     <label>Site Latitude:</label>
-                    <input id="site_latitude" type="text" class="form-control" name="site_latitude">
+                    <input id="siteLatitude" type="text" class="form-control" name="site_latitude">
                 </div>
                 <div class="form-group">
                     <label>Site Longitude:</label>
-                    <input id="site_longitude" type="text" class="form-control" name="site_longitude">
+                    <input id="siteLongitude" type="text" class="form-control" name="site_longitude">
                 </div>
                 <div class="form-group">
-                        <label>IP address: 0.0.0.0 </label>
-                        <input id="ipp" type="text" class="form-control" name="ip">
+                    <label>Application port</label>
+                    <input id="application_port" type="text" class="form-control" name="application_port">
                 </div>
                 <div class="form-group">
-                        <label>Port: couchdb-port-5984</label>
-                        <input id="portt" type="text" class="form-control" name="port">
+                    <label>Host Address</label>
+                    <input id="host_address" type="text" class="form-control" name="host_address">
                 </div>
                 <div class="form-group">
-                        <label>Couch-username</label>
-                        <input id="ccouch_username" type="text" class="form-control" name="couch_username">
+                    <label>IP address: 0.0.0.0 </label>
+                    <input id="IPAdress" type="text" class="form-control" name="ip">
                 </div>
                 <div class="form-group">
-                        <label>Couch-password</label>
-                        <input id="ccouch_password" type="text" class="form-control" name="couch_password">
+                    <label>Port: couchdb-port-5984</label>
+                    <input id="couchPort" type="text" class="form-control" name="port">
                 </div>
-                <button onclick="save_edit()" class="btn btn-success"> save </button>
-                <button onclick="disable()" class="btn btn-primary"> disable </button>
+                <diclass="form-group">
+                    <label>Couch-username</label>
+                    <input id="couchUsername" type="text" class="form-control" name="couch_username">
+                </div>
+                <div class="form-group">
+                    <label>Couch-password</label>
+                    <input id="couchPassword" type="text" class="form-control" name="couch_password">
+                </div>
+                <button id="save-new-site" class="btn btn-success"> save </button>
             </form>
+            
         </div>
     </div>
         
@@ -346,6 +361,44 @@
                 }
         });
     }
+    document.querySelector("#save-new-site").addEventListener("click", function(e){
+        e.preventDefault()
+        let siteName = document.getElementById("siteName").value
+        let siteCode = document.getElementById("siteCode").value
+        let siteDistrict = document.getElementById("siteDistrict").value
+        let siteRegion = document.getElementById("siteRegion").value
+        let siteDescription = document.getElementById("siteDescription").value
+        let siteLatitude = document.getElementById("siteLatitude").value
+        let siteLongitude = document.getElementById("siteLongitude").value
+        let siteApplicationPort = document.getElementById("application_port").value
+        let siteHostAddress = document.getElementById("host_address").value
+        let couchUsername = document.getElementById("couchUsername").value;
+        let couchPassword = document.getElementById("couchPassword").value;
+        let couchPort = document.getElementById("couchPort").value;
+        let ipAddress = document.getElementById("IPAdress").value;
+
+        let url = `/save_new_site?site=${siteName}&code=${siteCode}&district=${siteDistrict}&region=${siteRegion}&description=${siteDescription}&latitude=${siteLatitude}&longitude=${siteLongitude}&applicationport=${siteApplicationPort}&hostaddress=${siteHostAddress}&couchusername=${couchUsername}&couchpassword=${couchPassword}&couchport=${couchPort}$ipaddress=${ipAddress}`
+        console.log(url)
+        var info = document.getElementById("info");
+                    info.style.color = "green";
+                    info.innerHTML = "site saved";
+        jQuery.ajax({
+                async: false,
+                type: "post",
+                url: url,
+                success: function(res)
+                {
+                
+                    var info = document.getElementById("info");
+                    info.style.color = "green";
+                    info.innerHTML = "site saved";
+                },
+                error: function(err)
+                {
+                    console.log(err);
+                }
+        });
+    })
 
 
     function openTab(evt, type) {
