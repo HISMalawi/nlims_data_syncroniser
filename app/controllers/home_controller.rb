@@ -10,10 +10,8 @@ class HomeController < ApplicationController
             res = SiteSyncFrequency.find_by_sql("SELECT * FROM site_sync_frequencies WHERE site='#{site_id}'").last
             if res
              @last.push(st.id => res.updated_at)
-            end
-            
+            end 
         end
-       
     end
 
     def get_site_details
@@ -67,4 +65,13 @@ class HomeController < ApplicationController
         render plain: true and return
     end
 
+
+    def get_sites
+        sites = Site.where(:enabled => false)
+        site_names = []
+        sites.each do |s|
+            site_names.push([s.name, s.id])
+        end
+        render plain: JSON.generate({data: site_names}) and return
+    end
 end

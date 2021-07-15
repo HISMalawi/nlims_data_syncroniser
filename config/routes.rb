@@ -10,4 +10,5 @@ Rails.application.routes.draw do
   get  "/disable"        => "home#disable"
   post "/disable"        => "home#disable"
   post "/save_new_site" => "home#save_new_site"
+  post '/get_sites' => "home#get_sites"
 end

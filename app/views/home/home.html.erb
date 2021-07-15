@@ -105,7 +105,12 @@
         <div id="add" class="tabcontent">
             
             <div>
-                <form class="form">
+                <form class="form" method="POST">
+                    <!-- <div class="form-group">
+                        <input class="form-control" list="sitesCenters" id="site" name="site_selected" placeholder="Sites"/>
+                        <datalist id="sitesCenters">
+                        </datalist>
+                    </div> -->
                     <div class="form-group">
                             <label>Site name: </label>
                             <select id="site" class="form-control" name="site_selected"> 
@@ -149,7 +154,7 @@
         <div id="edit" class="tabcontent">
           
             <div>
-                <form class="form">
+                <form class="form" method="POST">
                     <div class="form-group">
                             <label>Site name: </label>
                             <select id="sitee" class="form-control" name="site_selected"> 
@@ -258,6 +263,32 @@
 
 
 <script type="text/javascript">
+    
+   
+    function sitesCentres(sites) {
+        if (Array.isArray(sites)) {
+            sites.forEach(function(site) {
+                container = $('datalist');
+                container.append(`<option class="tests-options" value="${site[0]}" id="${site[1]}"></option>`) 
+            })
+        }
+    }
+    function getSitesCenters(){
+        uri = '/get_sites'
+        jQuery.ajax({
+            url: uri,
+            type: "Post",
+            dataType: "json",
+            success: function(res) {
+                let response = res.data;
+                sitesCentres(response)
+            },
+            error: function(err){
+                console.log(err)
+            }
+        })
+    }
+    getSitesCenters()
 
     function disable()
     {
@@ -342,8 +373,9 @@
         var site_code = document.getElementById("site_code").value;
         var c_username = document.getElementById("couch_username").value;
         var c_password = document.getElementById("couch_password").value;
+        
+        var url = "/edit_site?site=" + site + "&ip=" + ip +"&port=" + port + "&site_code=" + site_code + "&username=" + c_username + "&password=" + c_password;
 
-        var url = "/edit_site?site=" + site + "&ip=" + ip + "&port=" + port + "&site_code=" + site_code + "&username=" + c_username + "&password=" + c_password;
         jQuery.ajax({
                 async: false,
                 type: "post",
@@ -361,6 +393,7 @@
                 }
         });
     }
+
     document.querySelector("#save-new-site").addEventListener("click", function(e){
         let siteName = document.getElementById("siteName").value
         let siteCode = document.getElementById("siteCode").value
@@ -377,7 +410,6 @@
         let ipAddress = document.getElementById("IPAdress").value;
 
         let url = `/save_new_site?site=${siteName}&code=${siteCode}&district=${siteDistrict}&region=${siteRegion}&description=${siteDescription}&latitude=${siteLatitude}&longitude=${siteLongitude}&applicationport=${siteApplicationPort}&hostaddress=${siteHostAddress}&couchusername=${couchUsername}&couchpassword=${couchPassword}&couchport=${couchPort}&ipaddress=${ipAddress}`
-        console.log(url)
         var info = document.getElementById("info");
                     info.style.color = "green";
                     info.innerHTML = "site saved";
@@ -413,7 +445,7 @@
         evt.currentTarget.className += " active";
     }
 
-
+    
 
     var zoomlevel = 1;
     var currentSite = "";
